@@ -78,6 +78,31 @@ while [ ! -S /var/run/dbus/system_bus_socket ] && [ "$tries" -lt 30 ]; do
 done
 start_service /usr/bin/lipc-daemon -f -p /etc/lipc-daemon-props.conf -e /etc/lipc-daemon-events.conf
 
+if [ "$KINDISH_ONLINE" = 1 ]; then
+  # Run the OTA's own supplicant, Wi-Fi daemon, and connection manager. These
+  # named QEMU wrappers add generic-netlink pass-through while preserving the
+  # process names Kindle's service scripts expect.
+  start_service /usr/local/libexec/kindish/wpa_supplicant \
+    -L / -E LD_PRELOAD=/usr/local/lib/libkindish-shim.so \
+    /usr/bin/wpa_supplicant -t -D nl80211 -i wlan0 \
+    -c /etc/kindish-wpa-supplicant.conf
+  tries=0
+  while [ ! -S /var/run/wpa_supplicant/wlan0 ] && [ "$tries" -lt 30 ]; do
+    sleep 1
+    tries=$((tries + 1))
+  done
+  start_service /usr/local/libexec/kindish/wifid \
+    -L / -E LD_PRELOAD=/usr/local/lib/libkindish-shim.so \
+    /usr/local/libexec/kindish/wifid-arm -f -n -r
+  start_service /usr/local/libexec/kindish/cmd \
+    -L / -E LD_PRELOAD=/usr/local/lib/libkindish-shim.so \
+    /usr/sbin/cmd -f
+  /usr/local/bin/kindish-wifi-bootstrap \
+    >>/var/log/kindish-services.log 2>&1 ||
+    printf 'Kindle Wi-Fi bootstrap did not reach connected state\n' \
+      >>/var/log/kindish-services.log
+fi
+
 # Reproduce the KPP Upstart pre-start registration. libappreg creates its
 # schema on the first open, so a second pass makes a pristine image converge
 # without replacing any Amazon data.

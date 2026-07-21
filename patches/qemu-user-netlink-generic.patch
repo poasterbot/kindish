@@ -1,0 +1,27 @@
+diff --git a/linux-user/syscall.c b/linux-user/syscall.c
+index e384e14..4993fec 100644
+--- a/linux-user/syscall.c
++++ b/linux-user/syscall.c
+@@ -3139,6 +3139,7 @@ static abi_long do_socket(int domain, int type, int protocol)
+ #ifdef CONFIG_RTNETLINK
+          protocol == NETLINK_ROUTE ||
+ #endif
++         protocol == NETLINK_GENERIC ||
+          protocol == NETLINK_KOBJECT_UEVENT ||
+          protocol == NETLINK_AUDIT)) {
+         return -TARGET_EPROTONOSUPPORT;
+@@ -3164,6 +3165,14 @@ static abi_long do_socket(int domain, int type, int protocol)
+                 fd_trans_register(ret, &target_netlink_route_trans);
+                 break;
+ #endif
++            case NETLINK_GENERIC:
++                /*
++                 * Generic-netlink and nl80211 use fixed-width headers and
++                 * attributes. Kindish runs a little-endian ARM guest on a
++                 * little-endian host, so their wire representation can pass
++                 * through unchanged.
++                 */
++                break;
+             case NETLINK_KOBJECT_UEVENT:
+                 /* nothing to do: messages are strings */
+                 break;

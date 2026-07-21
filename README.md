@@ -41,6 +41,24 @@ into application-level clicks. noVNC and VNC listen on loopback only.
 mise run stop
 ```
 
+To opt into Internet access and the stock account setup flow instead:
+
+```bash
+mise run online
+```
+
+Online mode uses `mac80211_hwsim` to create a WPA2 access point and a separate
+`wlan0` radio inside KindleOS. The OTA's actual ARM `wpa_supplicant`, `wifid`,
+and `cmd` binaries own that adapter, perform association and DHCP, and publish
+their normal LIPC state. A pinned QEMU user-mode build passes their `nl80211`
+generic-netlink traffic to the virtual kernel radio. Because translated
+netlink callbacks can exceed the physical device's fixed scan deadline, a
+runtime copy of `wifid` has only that deadline extended; its adapter control,
+profile handling, DHCP, routing, and LIPC behavior remain stock. DNS and NAT use the
+private `10.177.0.0/24` subnet; KindleOS still cannot see the host's other
+interfaces. The virtual SSID and passphrase are local simulator plumbing, not
+an Internet security boundary. No Amazon account or credentials are included.
+
 Books placed in `.cache/userstore/` persist and are visible at `/mnt/us` and
 `/mnt/base-us` in KindleOS.
 

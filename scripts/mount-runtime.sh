@@ -51,7 +51,8 @@ if ! is_mounted "$ROOT_DIR/dev"; then
   mount -t tmpfs -o mode=1777 tmpfs "$ROOT_DIR/dev/shm"
 fi
 mkdir -p "$ROOT_DIR/var/local/system" "$ROOT_DIR/var/local/kpp" \
-  "$ROOT_DIR/var/local/java/prefs" "$ROOT_DIR/var/run/dbus" "$ROOT_DIR/var/log" "$ROOT_DIR/var/tmp/root"
+  "$ROOT_DIR/var/local/java/prefs" "$ROOT_DIR/var/run/dbus" "$ROOT_DIR/var/log" \
+  "$ROOT_DIR/var/tmp/root" "$ROOT_DIR/usr/local/libexec/kindish"
 chmod 1777 "$ROOT_DIR/var/tmp"
 chmod 0777 "$ROOT_DIR/var/tmp/root" "$ROOT_DIR/var/local/kpp"
 
@@ -77,17 +78,47 @@ python3 "$PROJECT_ROOT/scripts/init-content-catalog.py" "$ROOT_DIR"
 chown 9000:150 "$ROOT_DIR/var/local/cc.db"
 chmod 0664 "$ROOT_DIR/var/local/cc.db"
 "$PROJECT_ROOT/scripts/build-shim.sh" >/dev/null
+"$PROJECT_ROOT/scripts/build-qemu-arm.sh" >/dev/null
 install -m 0755 "$CACHE_DIR/build/libkindish-shim.so" "$ROOT_DIR/usr/local/lib/libkindish-shim.so"
+install -m 0755 "$CACHE_DIR/build/qemu-arm-kindish" \
+  "$ROOT_DIR/usr/local/libexec/kindish/qemu-arm"
+# qemu-user can deliver an nl80211 scan completion after the Kindle daemon's
+# physical-device deadline. Keep the OTA binary intact and extend that one
+# deadline in a private runtime copy used by the emulator.
+install -m 0755 "$ROOT_DIR/usr/sbin/wifid" \
+  "$ROOT_DIR/usr/local/libexec/kindish/wifid-arm"
+python3 "$PROJECT_ROOT/scripts/patch-wifid-scan-timeout.py" \
+  "$ROOT_DIR/usr/local/libexec/kindish/wifid-arm"
+for network_process in wpa_supplicant wifid cmd; do
+  ln -f "$ROOT_DIR/usr/local/libexec/kindish/qemu-arm" \
+    "$ROOT_DIR/usr/local/libexec/kindish/$network_process"
+done
+[[ -e "$ROOT_DIR/usr/bin/bash" ]] || ln -s /bin/sh "$ROOT_DIR/usr/bin/bash"
+for wifi_data in hid.csv wifid.conf certstore.db; do
+  if [[ -e "$ROOT_DIR/opt/var/local/system/$wifi_data" && \
+        ! -s "$ROOT_DIR/var/local/system/$wifi_data" ]]; then
+    install -m 0644 "$ROOT_DIR/opt/var/local/system/$wifi_data" \
+      "$ROOT_DIR/var/local/system/$wifi_data"
+  fi
+done
 install -m 0755 "$PROJECT_ROOT/guest/kindish-framework-launch.sh" \
   "$ROOT_DIR/usr/local/bin/kindish-framework-launch"
 install -m 0755 "$PROJECT_ROOT/guest/kindish-launch-home.sh" \
   "$ROOT_DIR/usr/local/bin/kindish-launch-home"
+install -m 0755 "$PROJECT_ROOT/guest/kindish-oobe-launch.sh" \
+  "$ROOT_DIR/usr/local/bin/kindish-oobe-launch"
+install -m 0755 "$PROJECT_ROOT/guest/kindish-wifi-bootstrap.sh" \
+  "$ROOT_DIR/usr/local/bin/kindish-wifi-bootstrap"
+install -m 0644 "$PROJECT_ROOT/guest/kindish-oobe.install" \
+  "$ROOT_DIR/etc/kindish-oobe.install"
 install -m 0755 "$PROJECT_ROOT/guest/kindish-mtp-hw.sh" \
   "$ROOT_DIR/usr/bin/mtp.sh"
 install -m 0644 "$PROJECT_ROOT/guest/kindish-xorg.conf" \
   "$ROOT_DIR/etc/kindish-xorg.conf"
 install -m 0644 "$PROJECT_ROOT/guest/fontconfig-local.conf" \
   "$ROOT_DIR/etc/fonts/local.conf"
+install -m 0644 "$PROJECT_ROOT/guest/kindish-wpa-supplicant.conf" \
+  "$ROOT_DIR/etc/kindish-wpa-supplicant.conf"
 install -m 0644 "$PROJECT_ROOT/guest/session_token" \
   "$ROOT_DIR/var/tmp/session_token"
 printf '%s\n' 'LANG=en_US.UTF-8' 'LC_ALL=en_US.UTF-8' > "$ROOT_DIR/var/local/system/locale"
