@@ -14,9 +14,16 @@ can appear to Linux as a virtual USB Kindle with read/write MTP storage.
 ## Quick start (Ubuntu 24.04)
 
 ```bash
-sudo ./kindish setup
-sudo ./kindish start
+curl https://mise.run | sh
+eval "$(~/.local/bin/mise activate bash)"
+mise trust
+mise bootstrap --yes
+mise run start
 ```
+
+The committed `mise.toml` pins Python, declares the Ubuntu package set, builds
+the running kernel's virtual USB module, and provides all project tasks. After
+the first bootstrap, use `mise tasks` to list them.
 
 Open the URL printed by `start`, normally:
 
@@ -30,7 +37,7 @@ the OTA's `/usr/lib/xorg/modules/input/multitouch.so`; it is not translated
 into application-level clicks. noVNC and VNC listen on loopback only.
 
 ```bash
-sudo ./kindish stop
+mise run stop
 ```
 
 Books placed in `.cache/userstore/` persist and are visible at `/mnt/us` and
@@ -41,10 +48,10 @@ Books placed in `.cache/userstore/` persist and are visible at `/mnt/us` and
 With KindleOS running:
 
 ```bash
-sudo ./kindish mtp-start
+mise run mtp:start
 lsusb -d 1949:9981
 mtp-detect
-sudo ./kindish mtp-stop
+mise run mtp:stop
 ```
 
 This uses Linux `dummy_hcd` as a virtual host controller and UDC, ConfigFS plus
@@ -108,10 +115,11 @@ it; it is not cycle-accurate hardware emulation.
 Useful commands:
 
 ```bash
-./kindish fetch       # official OTA and exact hash verification
-./kindish extract     # KindleTool extraction
-./kindish inspect     # OTA, FIT kernel, and filesystem metadata
-./kindish status
+mise run fetch        # official OTA and exact hash verification
+mise run extract      # KindleTool extraction
+mise run inspect      # OTA, FIT kernel, and filesystem metadata
+mise run status
+mise run check        # shell, Python, C, and whitespace validation
 ```
 
 Host-side logs are in `.cache/runtime/logs/`; Kindle-side logs live in the

@@ -2,5 +2,7 @@
 runtime/
 __pycache__/
 *.py[cod]
+mise.local.toml
+mise.local.lock
 *.log
 *.pid

@@ -6,7 +6,7 @@ usage() {
   cat <<'EOF'
 Usage: ./kindish COMMAND
 
-  setup       Install Ubuntu host dependencies
+  setup       Provision Ubuntu host dependencies through mise
   fetch       Download and verify the official 5.19.2 KT6 recovery OTA
   extract     Extract the actual Amazon root filesystem and boot images
   inspect     Show OTA, FIT kernel, and filesystem metadata
