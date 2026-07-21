@@ -10,7 +10,7 @@ Usage: ./kindish COMMAND
   fetch       Download and verify the official 5.19.2 KT6 recovery OTA
   extract     Extract the actual Amazon root filesystem and boot images
   inspect     Show OTA, FIT kernel, and filesystem metadata
-  start       Launch the offline interactive Kindle UI and local noVNC
+  start       Launch the interactive Kindle UI (add --online for Wi-Fi/NAT)
   stop        Stop the UI, MTP gadget, and runtime mounts
   status      Show runtime status and browser address
   mtp-start   Attach the Kindle's tizen-mtp as a local virtual USB device
@@ -24,7 +24,7 @@ case "$command" in
   fetch) exec "$root/scripts/fetch-firmware.sh" ;;
   extract) exec "$root/scripts/extract-firmware.sh" ;;
   inspect) exec "$root/scripts/inspect-firmware.sh" ;;
-  start) exec "$root/scripts/start.sh" ;;
+  start) shift; exec "$root/scripts/start.sh" "$@" ;;
   stop) exec "$root/scripts/stop.sh" ;;
   status) exec "$root/scripts/status.sh" ;;
   mtp-start) exec "$root/scripts/mtp-start.sh" ;;

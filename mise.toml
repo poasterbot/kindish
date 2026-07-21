@@ -63,6 +63,10 @@ run = "./kindish inspect"
 description = "Start the offline KindleOS simulator"
 run = "sudo ./kindish start"
 
+[tasks.online]
+description = "Start KindleOS with isolated virtual Wi-Fi and Internet access"
+run = "sudo ./kindish start --online"
+
 [tasks.stop]
 description = "Stop KindleOS and preserve its writable state"
 run = "sudo ./kindish stop"

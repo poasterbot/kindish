@@ -8,8 +8,9 @@ framework, KAF, Home/Library application, app manager, KPP process, and MTP
 responder all run in the simulator.
 
 It provides an interactive 1072×1448 screen in a local browser, starts at
-Home without the login/OOBE gate, has no host or Internet network path, and
-can appear to Linux as a virtual USB Kindle with read/write MTP storage.
+Home without the login/OOBE gate, stays offline by default, and can appear to
+Linux as a virtual USB Kindle with read/write MTP storage. An explicit online
+mode presents a simulated WPA2 Wi-Fi radio and opens the genuine setup screen.
 
 ## Quick start (Ubuntu 24.04)
 
@@ -82,6 +83,14 @@ the framebuffer geometry and missing Lab126 identity/block-device ioctls. The
 framebuffer is presented through x11vnc/noVNC rather than a physical waveform
 controller.
 
+Like the physical userspace, OTA Xorg owns display `:0`. Kindish gives it a
+private mount namespace with a dedicated `/tmp/.X11-unix` and a private
+network namespace for Linux's abstract X11 socket, so neither form of X0 can
+collide with a host desktop. x11vnc joins the private mount but runs in a
+second, interface-free network namespace and exports pixels through a Unix
+socket; only the host-side noVNC and loopback VNC bridges are network
+listeners.
+
 The OTA's Awesome/window-manager binary can run, but its rotation policy
 assumes MT8110 framebuffer rotation and distorts dialogs without that kernel
 interface. Kindish therefore uses a small host-side layout watcher: the active
@@ -99,10 +108,12 @@ the actual registration service remains honestly unregistered, and Library
 may show “Set Up Your Kindle,” but Home and local content are usable without a
 login. The downloaded OTA and extracted lower image remain unchanged.
 
-The Kindle process tree runs in fresh network and IPC namespaces. Its network
-namespace contains only loopback—no veth, external route, DNS, NAT, host path,
-or Internet path. Browser/VNC and virtual USB live outside that namespace on
-the host.
+The Kindle process tree runs in fresh network and IPC namespaces. In default
+mode its network namespace contains only loopback—no external route, DNS, NAT,
+host path, or Internet path. Online mode adds only the simulated Wi-Fi radio
+and private NAT route. The noVNC/VNC listeners and virtual USB transport live
+outside that namespace on the host; the pixel stream crosses the boundary
+only through its local Unix socket.
 
 ## Scope and limitations
 
@@ -123,6 +134,5 @@ mise run check        # shell, Python, C, and whitespace validation
 ```
 
 Host-side logs are in `.cache/runtime/logs/`; Kindle-side logs live in the
-persistent runtime image. Do not add interfaces to the Kindle network
-namespace or externally expose the loopback-only VNC ports if isolation is a
-requirement.
+persistent runtime image. Do not use online mode or externally expose the
+loopback-only VNC ports if complete network isolation is a requirement.

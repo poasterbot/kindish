@@ -3,12 +3,13 @@ set -eu
 
 export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/app/bin
 export HOME=/var/tmp/root
-export DISPLAY="${DISPLAY:-:6}"
+export DISPLAY="${DISPLAY:-:0}"
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 export QEMU_CPU=cortex-a7
 export LD_PRELOAD=/usr/local/lib/libkindish-shim.so
 export LIBC_FATAL_STDERR_=1
+export KINDISH_ONLINE="${KINDISH_ONLINE:-0}"
 
 mkdir -p /var/run/dbus /var/lib/dbus /var/local/kpp /var/tmp/root
 [ ! -e /var/run/dbus/pid ] || unlink /var/run/dbus/pid
@@ -84,6 +85,9 @@ for pass in 1 2; do
   /usr/bin/register /app/registry/kppmainapp.install >>/var/log/kindish-services.log 2>&1 || true
   /usr/bin/register /app/registry/kppstore.install >>/var/log/kindish-services.log 2>&1 || true
   /usr/bin/register /app/registry/kpp_home_default_app.install >>/var/log/kindish-services.log 2>&1 || true
+  if [ "$KINDISH_ONLINE" = 1 ]; then
+    /usr/bin/register /etc/kindish-oobe.install >>/var/log/kindish-services.log 2>&1 || true
+  fi
 done
 # The physical boot sequence sets portrait display mode before the Java KAF
 # services start. This writes only the runtime dynconfig database.

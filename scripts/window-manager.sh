@@ -2,6 +2,7 @@
 set -euo pipefail
 source "$(dirname "$0")/_common.sh"
 
+enter_display_namespace "$0" "$@"
 export DISPLAY="$DISPLAY_VALUE"
 
 width="${DISPLAY_RESOLUTION%x*}"

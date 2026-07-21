@@ -8,7 +8,11 @@ tries=0
 while [ "$tries" -lt 90 ]; do
   framework_started="$(/usr/bin/lipc-get-prop com.lab126.kaf frameworkStarted 2>/dev/null || true)"
   if [ "$framework_started" = "1" ]; then
-    /usr/bin/lipc-set-prop com.lab126.appmgrd start app://com.lab126.booklet.home
+    if [ "${KINDISH_ONLINE:-0}" = 1 ]; then
+      /usr/bin/lipc-set-prop com.lab126.appmgrd start 'app://com.lab126.oobe?view=Register'
+    else
+      /usr/bin/lipc-set-prop com.lab126.appmgrd start app://com.lab126.booklet.home
+    fi
     exit 0
   fi
   sleep 2

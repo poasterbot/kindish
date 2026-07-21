@@ -50,8 +50,6 @@ if ! is_mounted "$ROOT_DIR/dev"; then
   mount -t devpts devpts "$ROOT_DIR/dev/pts"
   mount -t tmpfs -o mode=1777 tmpfs "$ROOT_DIR/dev/shm"
 fi
-is_mounted "$ROOT_DIR/var/tmp/.X11-unix" || mount --bind /tmp/.X11-unix "$ROOT_DIR/var/tmp/.X11-unix"
-
 mkdir -p "$ROOT_DIR/var/local/system" "$ROOT_DIR/var/local/kpp" \
   "$ROOT_DIR/var/local/java/prefs" "$ROOT_DIR/var/run/dbus" "$ROOT_DIR/var/log" "$ROOT_DIR/var/tmp/root"
 chmod 1777 "$ROOT_DIR/var/tmp"

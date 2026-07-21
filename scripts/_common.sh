@@ -15,13 +15,14 @@ RUNTIME_DIR="$CACHE_DIR/runtime"
 ROOT_DIR="$RUNTIME_DIR/root"
 RUNTIME_IMAGE="$RUNTIME_DIR/kindleos-${FIRMWARE_VERSION}-rw.img"
 USERSTORE_DIR="$CACHE_DIR/userstore"
-DISPLAY_NUMBER="${KINDISH_DISPLAY_NUMBER:-6}"
+DISPLAY_NUMBER="${KINDISH_DISPLAY_NUMBER:-0}"
 DISPLAY_RESOLUTION="${KINDISH_DISPLAY_RESOLUTION:-1072x1448}"
 VNC_PORT="${KINDISH_VNC_PORT:-5906}"
 NOVNC_PORT="${KINDISH_NOVNC_PORT:-6080}"
 DISPLAY_VALUE=":$DISPLAY_NUMBER"
 PID_DIR="$RUNTIME_DIR/pids"
 LOG_DIR="$RUNTIME_DIR/logs"
+VNC_SOCKET="$RUNTIME_DIR/kindish-vnc.sock"
 PATCHED_HBC="$CACHE_DIR/patches/KPPMainApp.js.hbc.patched"
 
 die() {
@@ -39,4 +40,14 @@ is_mounted() {
 
 pid_alive() {
   [[ -s "$1" ]] && kill -0 "$(<"$1")" 2>/dev/null
+}
+
+# Host display tools must share both namespaces with OTA Xorg. The mount
+# namespace exposes the guest's private X0 pathname, while the network
+# namespace selects its equally private Linux abstract X0 socket.
+enter_display_namespace() {
+  [[ "${KINDISH_X11_ENTERED:-0}" != 1 ]] || return 0
+  pid_alive "$PID_DIR/supervisor.pid" || die "KindleOS is not running"
+  exec nsenter -t "$(<"$PID_DIR/supervisor.pid")" -m -n -- \
+    env KINDISH_X11_ENTERED=1 DISPLAY="$DISPLAY_VALUE" "$@"
 }
