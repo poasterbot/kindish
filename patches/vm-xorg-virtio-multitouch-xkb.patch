@@ -1,0 +1,12 @@
+--- a/etc/upstart/makexconfig
++++ b/etc/upstart/makexconfig
+@@ -160,6 +160,9 @@ virtio_tablet()
+   echo '      Option          "multitouch" "1"' >> $XCONFFILE
+   echo '      Option          "SizeXMM" "270"' >> $XCONFFILE
+   echo '      Option          "SizeYMM" "360"' >> $XCONFFILE
++  echo '      Option          "XkbRules" "evdev"' >> $XCONFFILE
++  echo '      Option          "XkbModel" "evdev"' >> $XCONFFILE
++  echo '      Option          "XkbLayout" "us"' >> $XCONFFILE
+   echo 'EndSection' >> $XCONFFILE
+   echo '' >> $XCONFFILE
+ }

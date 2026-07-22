@@ -1,0 +1,33 @@
+diff --git a/etc/sysconfig/board_variables b/etc/sysconfig/board_variables
+index f47fa91..2adf85f 100644
+--- a/etc/sysconfig/board_variables
++++ b/etc/sysconfig/board_variables
+@@ -2,8 +2,11 @@ BOARD_PERSIST_PARTITION=true
+ PERSIST_P=p5
+ DIMENSION=170
+ MTP_AVAILABLE=true
+-DL_SUPPORTED=true
+-DL_SUPPORTED_VL=true
+-DL_V1_POLICY=true
++# The QEMU compatibility board provides ordinary persistent block devices but
++# does not emulate the MT8110 secure-world key ladder. Keep the stock
++# filesystem jobs while disabling only their hardware encryption layer.
++DL_SUPPORTED=false
++DL_SUPPORTED_VL=false
++DL_V1_POLICY=false
+ 
+ ### kernel team variables ###
+diff --git a/etc/sysconfig/platform_variables b/etc/sysconfig/platform_variables
+index d920ca0..eedb20c 100644
+--- a/etc/sysconfig/platform_variables
++++ b/etc/sysconfig/platform_variables
+@@ -20,7 +20,8 @@ BOARD_STALL=0
+ BOARD_AUTO_FW_UPDATE=1
+ BOARD_LOAD_PT5_MODULE=1
+ BOARD_TOUCH_CHECK_VID=1
+-BOARD_DHA_VERSION=DHAv2-optee
++# The compatibility board has no secure DHA key store or OP-TEE endpoint.
++BOARD_DHA_VERSION=none
+ BOARD_MODULES_CONF_MODPROBE_FALCON=1
+ BOARD_MODULES_NH_LOAD_DIAGS=0
+ 

@@ -1,0 +1,79 @@
+diff --git a/include/ui/input.h b/include/ui/input.h
+index 8f9aac562e..3f597865ed 100644
+--- a/include/ui/input.h
++++ b/include/ui/input.h
+@@ -58,6 +58,7 @@ void qemu_input_update_buttons(QemuConsole *src, uint32_t *button_map,
+                                uint32_t button_old, uint32_t button_new);
+ 
+ bool qemu_input_is_absolute(QemuConsole *con);
++bool qemu_input_is_multitouch(QemuConsole *con);
+ int qemu_input_scale_axis(int value,
+                           int min_in, int max_in,
+                           int min_out, int max_out);
+diff --git a/ui/input.c b/ui/input.c
+index dc745860f4..7c7e919023 100644
+--- a/ui/input.c
++++ b/ui/input.c
+@@ -503,6 +503,11 @@ bool qemu_input_is_absolute(QemuConsole *con)
+     return (s != NULL) && (s->handler->mask & INPUT_EVENT_MASK_ABS);
+ }
+ 
++bool qemu_input_is_multitouch(QemuConsole *con)
++{
++    return qemu_input_find_handler(INPUT_EVENT_MASK_MTT, con) != NULL;
++}
++
+ int qemu_input_scale_axis(int value,
+                           int min_in, int max_in,
+                           int min_out, int max_out)
+diff --git a/ui/vnc.c b/ui/vnc.c
+index 3b2c71e653..661bc241de 100644
+--- a/ui/vnc.c
++++ b/ui/vnc.c
+@@ -1771,7 +1771,8 @@ uint32_t read_u32(uint8_t *data, size_t offset)
+ static void check_pointer_type_change(Notifier *notifier, void *data)
+ {
+     VncState *vs = container_of(notifier, VncState, mouse_mode_notifier);
+-    int absolute = qemu_input_is_absolute(vs->vd->dcl.con);
++    int absolute = qemu_input_is_absolute(vs->vd->dcl.con) ||
++                   qemu_input_is_multitouch(vs->vd->dcl.con);
+ 
+     if (vnc_has_feature(vs, VNC_FEATURE_POINTER_TYPE_CHANGE) && vs->absolute != absolute) {
+         vnc_lock_output(vs);
+@@ -1801,6 +1802,36 @@ static void pointer_event(VncState *vs, int button_mask, int x, int y)
+     int width = pixman_image_get_width(vs->vd->server);
+     int height = pixman_image_get_height(vs->vd->server);
+ 
++    /*
++     * RFB only has pointer events, while modern direct-touch guests may expose
++     * only a multi-touch input handler.  Treat the primary VNC button as one
++     * contact in slot zero so those guests receive a real Linux MT event
++     * stream rather than an emulated mouse.
++     */
++    if (qemu_input_is_multitouch(con)) {
++        bool was_down = vs->last_bmask & bmap[INPUT_BUTTON_LEFT];
++        bool is_down = button_mask & bmap[INPUT_BUTTON_LEFT];
++
++        if (is_down) {
++            qemu_input_queue_mtt(con,
++                                 was_down ? INPUT_MULTI_TOUCH_TYPE_UPDATE
++                                          : INPUT_MULTI_TOUCH_TYPE_BEGIN,
++                                 0, 0);
++            qemu_input_queue_btn(con, INPUT_BUTTON_TOUCH, true);
++            qemu_input_queue_mtt_abs(con, INPUT_AXIS_X, x, 0, width,
++                                     0, 0);
++            qemu_input_queue_mtt_abs(con, INPUT_AXIS_Y, y, 0, height,
++                                     0, 0);
++        } else if (was_down) {
++            qemu_input_queue_mtt(con, INPUT_MULTI_TOUCH_TYPE_END, 0, -1);
++            qemu_input_queue_btn(con, INPUT_BUTTON_TOUCH, false);
++        }
++
++        vs->last_bmask = button_mask;
++        qemu_input_event_sync();
++        return;
++    }
++
+     if (vs->last_bmask != button_mask) {
+         qemu_input_update_buttons(con, bmap, vs->last_bmask, button_mask);
+         vs->last_bmask = button_mask;

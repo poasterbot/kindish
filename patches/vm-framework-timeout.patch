@@ -1,0 +1,14 @@
+--- a/etc/upstart/framework_setup.conf
++++ b/etc/upstart/framework_setup.conf
+@@ -38,7 +38,10 @@ script
+     then
+         TO=0  # 0 apparently means "forever"
+     else
+-        TO=105
++        # Full-system ARM translation is substantially slower than the MT8110
++        # hardware. Keep the stock watchdog and failure path, but give the real
++        # Java framework enough wall-clock time to finish its normal startup.
++        TO=600
+     fi
+     if [ $TRACK_MEMORY -eq 1 ]; then
+         TO=0  # 0 apparently means "forever"

@@ -1,0 +1,16 @@
+diff --git a/etc/upstart/kindish-debug-console.conf b/etc/upstart/kindish-debug-console.conf
+new file mode 100644
+index 0000000..aabbccd
+--- /dev/null
++++ b/etc/upstart/kindish-debug-console.conf
+@@ -0,0 +1,10 @@
++# Root console exposed only on the QEMU compatibility board's virtio console.
++# It is separate from the stock Kindle login console on ttyAMA0.
++description "Kindish VM diagnostic console"
++
++start on started system
++stop on stopping system
++
++respawn
++
++exec /sbin/getty -L -n -l /bin/sh 0 hvc0 vt100

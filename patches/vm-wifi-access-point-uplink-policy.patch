@@ -1,0 +1,23 @@
+diff --git a/etc/upstart/kindish-wifi-ap.conf b/etc/upstart/kindish-wifi-ap.conf
+--- a/etc/upstart/kindish-wifi-ap.conf
++++ b/etc/upstart/kindish-wifi-ap.conf
+@@ -19,5 +19,9 @@ script
+     "$ip" addr add 172.31.254.1/30 dev kindish-root
+     "$ip" link set kindish-root up
++    "$ip" route add table 200 10.0.2.0/24 dev eth0
++    "$ip" route add table 200 default via 10.0.2.2 dev eth0
++    "$ip" rule add priority 90 fwmark 200 lookup 200
++    iptables -t mangle -A PREROUTING -i kindish-root -j MARK --set-mark 200
+     "$ip" netns exec "$ap_ns" ip link set lo up
+     "$ip" netns exec "$ap_ns" ip addr add 172.31.254.2/30 dev kindish-uplink
+     "$ip" netns exec "$ap_ns" ip link set kindish-uplink up
+@@ -52,6 +56,9 @@ post-stop script
+     iptables -D FORWARD -i kindish-root -o eth0 -j ACCEPT 2>/dev/null || true
+     iptables -D FORWARD -i eth0 -o kindish-root -m conntrack \
+         --ctstate RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
++    iptables -t mangle -D PREROUTING -i kindish-root -j MARK --set-mark 200 2>/dev/null || true
++    "$ip" rule del priority 90 fwmark 200 lookup 200 2>/dev/null || true
++    "$ip" route flush table 200 2>/dev/null || true
+     "$ip" netns exec kindish-ap iw phy phy1 set netns 1 2>/dev/null || true
+     "$ip" link del kindish-root 2>/dev/null || true
+     "$ip" netns del kindish-ap 2>/dev/null || true

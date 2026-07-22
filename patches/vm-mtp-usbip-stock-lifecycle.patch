@@ -1,0 +1,44 @@
+diff --git a/etc/upstart/kindish-mtp-usbip.conf b/etc/upstart/kindish-mtp-usbip.conf
+--- a/etc/upstart/kindish-mtp-usbip.conf
++++ b/etc/upstart/kindish-mtp-usbip.conf
+@@ -15,7 +15,19 @@ script
+     [ -e "$gadget/functions/ffs.mtp/ready" ] || exit 1
+     [ "$(cat "$gadget/functions/ffs.mtp/ready")" = 1 ] || exit 1
+ 
+-    /usr/bin/mtp.sh udc enable
++    # Reproduce the stock cable lifecycle.  The responder first enumerates a
++    # probe gadget, asks volumd to unmount user storage, then reconnects with
++    # its message queues ready.  Binding the UDC here would skip that state
++    # machine and leave MTP unable to open a session.
++    /usr/bin/lipc-set-prop com.lab126.mtp startMtp 1
++    for count in $(seq 1 30); do
++        [ "$(/usr/bin/lipc-get-prop com.lab126.volumd driveModeState 2>/dev/null)" = 1 ] && break
++        sleep 1
++    done
++    [ "$(/usr/bin/lipc-get-prop com.lab126.volumd driveModeState 2>/dev/null)" = 1 ] || exit 1
++
++    # Ignore the responder's short-lived probe enumeration and wait for the
++    # final gadget that appears after DRIVE_MODE_ON.
+     for count in $(seq 1 30); do
+         [ -e /sys/bus/usb/devices/1-1/idVendor ] && break
+         sleep 1
+@@ -29,9 +41,16 @@ script
+ end script
+ 
+ post-stop script
++    gadget=/sys/kernel/config/usb_gadget/mtpgadget
+     export LD_LIBRARY_PATH=/usr/local/lib/kindish-usbip
+     /usr/local/sbin/kindish-usbip unbind --busid=1-1 2>/dev/null || true
+-    if [ -e /sys/kernel/config/usb_gadget/mtpgadget/UDC ]; then
+-        /usr/bin/mtp.sh udc disable 2>/dev/null || true
+-    fi
++    /usr/bin/lipc-set-prop com.lab126.mtp stopMtp 1 2>/dev/null || true
++    for count in $(seq 1 10); do
++        if [ ! -e "$gadget/UDC" ] || [ -z "$(cat "$gadget/UDC" 2>/dev/null)" ]; then
++            break
++        fi
++        sleep 1
++    done
++    [ "$(/usr/bin/lipc-get-prop com.lab126.volumd driveModeState 2>/dev/null)" = 0 ] ||
++        /usr/bin/mtp.sh notify unconfigured 2>/dev/null || true
+ end script

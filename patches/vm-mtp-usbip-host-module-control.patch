@@ -1,0 +1,20 @@
+diff --git a/etc/upstart/kindish-mtp-usbip.conf b/etc/upstart/kindish-mtp-usbip.conf
+--- a/etc/upstart/kindish-mtp-usbip.conf
++++ b/etc/upstart/kindish-mtp-usbip.conf
+@@ -7,10 +7,6 @@ respawn
+ respawn limit 5 60
+ 
+ script
+-    [ -e /lib/modules/6.12.89/kernel/drivers/usb/gadget/udc/dummy_hcd.ko ] || exit 1
+-    grep -q '^dummy_hcd ' /proc/modules || \
+-        insmod /lib/modules/6.12.89/kernel/drivers/usb/gadget/udc/dummy_hcd.ko
+-
+     gadget=/sys/kernel/config/usb_gadget/mtpgadget
+     for count in $(seq 1 120); do
+         [ -e "$gadget/functions/ffs.mtp/ready" ] && \
+@@ -40,5 +36,4 @@ post-stop script
+     if [ -e /sys/kernel/config/usb_gadget/mtpgadget/UDC ]; then
+         /usr/bin/mtp.sh udc disable 2>/dev/null || true
+     fi
+-    rmmod dummy_hcd 2>/dev/null || true
+ end script

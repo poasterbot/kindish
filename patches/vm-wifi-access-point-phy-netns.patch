@@ -1,0 +1,20 @@
+diff --git a/etc/upstart/kindish-wifi-ap.conf b/etc/upstart/kindish-wifi-ap.conf
+--- a/etc/upstart/kindish-wifi-ap.conf
++++ b/etc/upstart/kindish-wifi-ap.conf
+@@ -14,7 +14,7 @@ script
+     "$ip" netns add "$ap_ns"
+     "$ip" link add kindish-root type veth peer name kindish-uplink
+     "$ip" link set kindish-uplink netns "$ap_ns"
+-    "$ip" link set wlan1 netns "$ap_ns"
++    iw phy phy1 set netns name /var/netns/"$ap_ns"
+ 
+     "$ip" addr add 172.31.254.1/30 dev kindish-root
+     "$ip" link set kindish-root up
+@@ -53,7 +53,7 @@ post-stop script
+     iptables -D FORWARD -i eth0 -o kindish-root -m conntrack \
+         --ctstate RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
+-    "$ip" netns exec kindish-ap "$ip" link set wlan1 netns 1 2>/dev/null || true
++    "$ip" netns exec kindish-ap iw phy phy1 set netns 1 2>/dev/null || true
+     "$ip" link del kindish-root 2>/dev/null || true
+     "$ip" netns del kindish-ap 2>/dev/null || true
+ end script

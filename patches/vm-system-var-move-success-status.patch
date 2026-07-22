@@ -1,0 +1,30 @@
+diff --git a/etc/upstart/system.conf b/etc/upstart/system.conf
+--- a/etc/upstart/system.conf
++++ b/etc/upstart/system.conf
+@@ -116,12 +116,19 @@ pre-start script
+   cp -a -f /var/. /mnt/rwfs/.
+   f_milestone 49.2
+-  mount --move /mnt/rwfs /var || {
+-    move_status=$?
+-    echo "kindish: unable to move writable /var (status $move_status)" \
+-      >/dev/console
+-    cat /proc/self/mountinfo >/dev/console
+-    exit "$move_status"
+-  }
++  move_status=0
++  mount --move /mnt/rwfs /var || move_status=$?
++  if [ "$move_status" -ne 0 ]; then
++    if grep -q ' /var .* - tmpfs ' /proc/self/mountinfo && \
++       ! grep -q ' /mnt/rwfs ' /proc/self/mountinfo; then
++      echo "kindish: writable /var move completed with status $move_status" \
++        >/dev/console
++    else
++      echo "kindish: unable to move writable /var (status $move_status)" \
++        >/dev/console
++      cat /proc/self/mountinfo >/dev/console
++      exit "$move_status"
++    fi
++  fi
+   f_milestone 49.3
+ 
+   # create tmpfs directory for yj if this is device is not a 256MB memory device

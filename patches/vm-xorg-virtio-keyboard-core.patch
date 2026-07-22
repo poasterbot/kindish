@@ -1,0 +1,28 @@
+diff --git a/etc/upstart/makexconfig b/etc/upstart/makexconfig
+--- a/etc/upstart/makexconfig
++++ b/etc/upstart/makexconfig
+@@ -151,6 +151,9 @@ virtio_keyboard()
+   echo "      Option          \"Device\" \"$1\"" >> $XCONFFILE
+   echo '      Option          "CoreKeyboard"' >> $XCONFFILE
+   echo '      Option          "AlwaysCore"' >> $XCONFFILE
++  echo '      Option          "XkbRules" "evdev"' >> $XCONFFILE
++  echo '      Option          "XkbModel" "evdev"' >> $XCONFFILE
++  echo '      Option          "XkbLayout" "us"' >> $XCONFFILE
+   echo 'EndSection' >> $XCONFFILE
+   echo '' >> $XCONFFILE
+ }
+@@ -336,11 +339,11 @@ server_layout()
+   echo '  Identifier "Kindle"' >> $XCONFFILE
+   echo '  Screen "Kscreen"' >> $XCONFFILE
+-  if [ -n "$IS_KEYPAD" ]; then
+-    echo "  InputDevice \"$IS_KEYPAD\"" >> $XCONFFILE 
+-  fi
+   if [ -n "$IS_VM_KEYBOARD" ]; then
+     echo "  InputDevice \"$IS_VM_KEYBOARD\"" >> $XCONFFILE
+   fi
++  if [ -n "$IS_KEYPAD" ]; then
++    echo "  InputDevice \"$IS_KEYPAD\"" >> $XCONFFILE 
++  fi
+   if [ -n "$IS_TOUCH" ]; then
+     echo "  InputDevice \"$IS_TOUCH\"" >> $XCONFFILE
+   fi

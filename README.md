@@ -1,30 +1,26 @@
-# Kindish — KT6 KindleOS 5.19.2 simulator
+# Kindish — full-system KindleOS 5.19.2 VM
 
-Kindish downloads Amazon's signed **2024 Kindle Basic (KT6/Bellatrix) 5.19.2**
-recovery OTA, verifies a pinned SHA-256, extracts its ARMv7 root filesystem,
-and runs the real Kindle userspace under QEMU user-mode translation. The real
-OTA X server, MediaTek display driver, Kindle multitouch driver, Java
-framework, KAF, Home/Library application, app manager, KPP process, and MTP
-responder all run in the simulator.
+Kindish boots Amazon's signed 2024 Kindle Basic (KT6/Bellatrix) 5.19.2
+root filesystem as a complete ARM virtual machine. The kernel invokes
+Amazon's `/sbin/init` wrapper, which execs `/sbin/init.exe` as PID 1; the stock
+Upstart graph mounts the Kindle partition layout, and the real Xorg, Java
+framework, KAF/KPP UI, `wifid`, `wpa_supplicant`, and `tizen-mtp` processes run
+inside the guest.
 
-It provides an interactive 1072×1448 screen in a local browser, starts at
-Home without the login/OOBE gate, stays offline by default, and can appear to
-Linux as a virtual USB Kindle with read/write MTP storage. An explicit online
-mode presents a simulated WPA2 Wi-Fi radio and opens the genuine setup screen.
+The retail MT8110 kernel cannot boot QEMU's generic ARM machine. Kindish uses
+a pinned Linux 6.12 compatibility kernel for QEMU `virt`, while retaining the
+official Amazon userspace and init system. Narrow compatibility patches cover
+only hardware ABI edges that QEMU does not implement.
 
-## Quick start (Ubuntu 24.04)
+## Quick start on Ubuntu 24.04
 
 ```bash
 curl https://mise.run | sh
 eval "$(~/.local/bin/mise activate bash)"
 mise trust
-mise bootstrap --yes
+mise run setup
 mise run start
 ```
-
-The committed `mise.toml` pins Python, declares the Ubuntu package set, builds
-the running kernel's virtual USB module, and provides all project tasks. After
-the first bootstrap, use `mise tasks` to list them.
 
 Open the URL printed by `start`, normally:
 
@@ -32,39 +28,61 @@ Open the URL printed by `start`, normally:
 http://127.0.0.1:6080/vnc.html?autoconnect=1&resize=scale
 ```
 
-The first run downloads roughly 357 MiB and builds a persistent runtime under
-`.cache/`. Mouse input goes through a host `uinput` absolute-touch device and
-the OTA's `/usr/lib/xorg/modules/input/multitouch.so`; it is not translated
-into application-level clicks. noVNC and VNC listen on loopback only.
+The first run downloads and verifies the official OTA, builds the ARM kernel,
+and creates a persistent 4 GiB virtual SD card under `.cache/runtime/`. Initial
+Java startup can take several minutes under TCG translation. Stop it with:
 
 ```bash
 mise run stop
 ```
 
-To opt into Internet access and the stock account setup flow instead:
+`stop` asks the real Kindle shutdown job to halt and preserves the writable
+`/var/local` and userstore partitions.
 
-```bash
-mise run online
-```
+## Emulated hardware
 
-Online mode uses `mac80211_hwsim` to create a WPA2 access point and a separate
-`wlan0` radio inside KindleOS. The OTA's actual ARM `wpa_supplicant`, `wifid`,
-and `cmd` binaries own that adapter, perform association and DHCP, and publish
-their normal LIPC state. A pinned QEMU user-mode build passes their `nl80211`
-generic-netlink traffic to the virtual kernel radio. Because translated
-netlink callbacks can exceed the physical device's fixed scan deadline, a
-runtime copy of `wifid` has only that deadline extended; its adapter control,
-profile handling, DHCP, routing, and LIPC behavior remain stock. DNS and NAT use the
-private `10.177.0.0/24` subnet; KindleOS still cannot see the host's other
-interfaces. The virtual SSID and passphrase are local simulator plumbing, not
-an Internet security boundary. No Amazon account or credentials are included.
+- Storage: QEMU SDHCI with a Kindle-shaped ten-partition GPT image. The
+  official root filesystem is partition 8; stock first-boot jobs own the
+  writable partitions.
+- Display: `virtio-gpu` provides a 1072×1448 DRM framebuffer with the
+  91×123 mm, 300 ppi panel metrics expected by KindleOS. Amazon Xorg 1.8 and
+  its `mtk_drv.so` render the actual Kindle UI into `/dev/fb0`. A narrow
+  device-capability interposer supplies those same metrics to Amazon Java,
+  WebKit, and window-manager code while forwarding every other capability to
+  the stock library.
+- Input: QEMU virtio keyboard and direct multi-touch devices. The touch device
+  passes through Amazon's `multitouch.so` GestureEngine so browser contacts
+  become normal Kindle taps and swipes.
+- Network: `mac80211_hwsim` creates two real `nl80211` radios. Stock `wifid`
+  owns `wlan0`; ARM `hostapd` turns `wlan1` into the `Kindish Internet` access
+  point in a separate Linux network namespace. DHCP and a two-stage AP/uplink
+  NAT route packets through the radio and then a separate virtio Ethernet
+  uplink, so KindleOS cannot accidentally route around the emulated adapter.
+- USB: the guest's `dummy_hcd` connects Amazon's FunctionFS MTP gadget to an
+  in-guest USB host. USB/IP exports that exact device to the Linux host. The
+  virtual cable controller is loaded only by `mtp:start`, preventing a
+  permanent "Connected to computer" blanket during normal boots.
 
-Books placed in `.cache/userstore/` persist and are visible at `/mnt/us` and
-`/mnt/base-us` in KindleOS.
+The compatibility kernel also supplies Kindle board identity nodes such as
+`/proc/board_id`, `/proc/product_name`, `/proc/productid`, and `/proc/usid`.
+Without `/proc/usid`, the stock Wi-Fi and MTP daemons deliberately exit.
 
-## Virtual USB MTP
+## Wi-Fi
 
-With KindleOS running:
+The guest access point is open and uses `10.177.0.0/24`. It is simulator
+plumbing, not a security boundary. KindleOS scans, associates, and obtains a
+lease over `wlan0` exactly as it would with a physical adapter; Internet
+traffic then traverses the second emulated radio, an isolated AP namespace,
+and QEMU's private uplink. The AP namespace translates station addresses onto
+its veth, and a marked policy route keeps that uplink traffic on `eth0` even
+when stock `wifid` installs more-specific DNS routes on `wlan0`.
+
+QEMU's VNC, noVNC, SSH forwarding, and USB/IP forwarding listen on loopback
+only. No account credentials are included in the image.
+
+## MTP
+
+With the VM running:
 
 ```bash
 mise run mtp:start
@@ -73,84 +91,59 @@ mtp-detect
 mise run mtp:stop
 ```
 
-This uses Linux `dummy_hcd` as a virtual host controller and UDC, ConfigFS plus
-FunctionFS for the USB transport, and the **actual OTA
-`/usr/bin/tizen-mtp`** as the protocol responder. It enumerates with Amazon
-VID/PID `1949:9981`, reports itself as an Amazon Kindle, opens MTP sessions,
-and exposes read/write Internal Storage. It is not a filesystem-only MTP
-facade.
+The attached device is Amazon VID/PID `1949:9981`. `mtp-detect` talks to the
+OTA's real `/usr/bin/tizen-mtp` responder and can open a session, enumerate its
+operations, and access the persistent Kindle storage. The host requires the
+running kernel's `vhci_hcd` module; `mise run setup` installs Ubuntu's matching
+`linux-modules-extra` and `linux-tools` packages.
 
-Amazon's `volumd` normally advances MTP after a physical MT8110 USB interrupt
-and temporarily unmounts `/mnt/us`. Kindish keeps the shared userstore mounted
-and emits that single `driveModeStateChanged=ON` hardware-completion event;
-all USB descriptors and MTP request handling still come from Amazon's
-responder.
+## Compatibility boundaries
 
-Ubuntu does not normally ship `dummy_hcd.ko`. `kindish setup` downloads the
-Linux v6.8 `dummy_hcd.c` from the upstream kernel repository, verifies its
-pinned hash, and builds it against the running Ubuntu kernel headers. This is
-an unsigned out-of-tree module and taints the host kernel; Secure Boot module
-enforcement may reject it.
+The root filesystem remains overwhelmingly stock. Maintained patches:
 
-## Display and e-ink model
+- guard writes to MT8110-only `/proc/bd` diagnostics;
+- use static board capabilities where the MediaTek data-layer service is
+  absent;
+- generate Xorg configuration for virtio graphics and input;
+- translate VNC's primary pointer contact into QEMU's native multi-touch event
+  stream;
+- extend the framework-start watchdog from 105 to 600 seconds for TCG;
+- add a root diagnostic console, the in-guest Wi-Fi AP, and the USB/IP bridge.
 
-This is more than a UI reimplementation. The OTA's ARM `/usr/bin/Xorg` 1.8.2
-loads its real `mtk_drv.so`, detects an emulated 1072×1448, 8-bit StaticGray
-`/dev/fb0`, and renders the real Kindle windows. A narrow preload shim supplies
-the framebuffer geometry and missing Lab126 identity/block-device ioctls. The
-framebuffer is presented through x11vnc/noVNC rather than a physical waveform
-controller.
+The kernel no-ops only the private e-ink ioctls issued by the old MediaTek X
+driver when the active framebuffer is `virtio_gpu`. It also preserves the
+active USB configuration only while the emulated Kindle `1949:9981` device on
+`dummy_hcd` changes ownership from Linux's generic USB driver to
+`usbip-host`; without that narrow exception, the loopback controller turns a
+host-driver handoff into a false physical unplug. Actual pixels still flow
+through DRM/fbdev, input through Linux evdev and Kindle's GestureEngine, and
+MTP requests through the OTA's responder.
 
-Like the physical userspace, OTA Xorg owns display `:0`. Kindish gives it a
-private mount namespace with a dedicated `/tmp/.X11-unix` and a private
-network namespace for Linux's abstract X11 socket, so neither form of X0 can
-collide with a host desktop. x11vnc joins the private mount but runs in a
-second, interface-free network namespace and exports pixels through a Unix
-socket; only the host-side noVNC and loopback VNC bridges are network
-listeners.
-
-The OTA's Awesome/window-manager binary can run, but its rotation policy
-assumes MT8110 framebuffer rotation and distorts dialogs without that kernel
-interface. Kindish therefore uses a small host-side layout watcher: the active
-real Kindle booklet occupies the center of the panel while the OTA's own KPP
-top chrome and Home/Library bottom navigation retain their native dimensions.
-E-ink ghosting, waveform timing, power states, secure boot/TEE, and the
-MediaTek display controller are not modeled.
-
-## Login bypass and offline boundary
-
-Kindish seeds the real Home preferences so first-boot/OOBE tutorials are
-complete and applies the maintained KPP registration-detection patch to a
-runtime copy of KPP Hermes bytecode. It does not create Amazon credentials:
-the actual registration service remains honestly unregistered, and Library
-may show “Set Up Your Kindle,” but Home and local content are usable without a
-login. The downloaded OTA and extracted lower image remain unchanged.
-
-The Kindle process tree runs in fresh network and IPC namespaces. In default
-mode its network namespace contains only loopback—no external route, DNS, NAT,
-host path, or Internet path. Online mode adds only the simulated Wi-Fi radio
-and private NAT route. The noVNC/VNC listeners and virtual USB transport live
-outside that namespace on the host; the pixel stream crosses the boundary
-only through its local Unix socket.
-
-## Scope and limitations
-
-The OTA also contains Amazon's ARM FIT kernel, ramdisk, and MT8110 device tree,
-and `./kindish inspect` preserves and reports them. QEMU has no KT6/MT8110
-machine model, so that kernel cannot be honestly booted as a full-system VM.
-Kindish runs the actual operating-system userspace with emulated devices under
-it; it is not cycle-accurate hardware emulation.
-
-Useful commands:
+## Useful commands
 
 ```bash
-mise run fetch        # official OTA and exact hash verification
-mise run extract      # KindleTool extraction
-mise run inspect      # OTA, FIT kernel, and filesystem metadata
+mise run fetch
+mise run extract
+mise run inspect
 mise run status
-mise run check        # shell, Python, C, and whitespace validation
+mise run check
 ```
 
-Host-side logs are in `.cache/runtime/logs/`; Kindle-side logs live in the
-persistent runtime image. Do not use online mode or externally expose the
-loopback-only VNC ports if complete network isolation is a requirement.
+The serial boot log is `.cache/runtime/kindish-vm-console.log`. The QMP and
+diagnostic virtio-console sockets are in the same runtime directory.
+
+## Limitations
+
+Kindish emulates the platform contract needed by KindleOS; it is not a
+cycle-accurate MT8110 model. Secure boot/TEE, the physical e-ink waveform
+controller, battery/thermal sensors, Bluetooth, and cellular hardware are not
+emulated. Their stock services may log missing-device warnings without
+blocking the main Kindle init graph.
+
+The official OTA is generic and does not contain the Amazon-issued per-device
+DSN, device secret, private key, or X.509 certificate provisioned at the
+factory. Internet connectivity works, but Amazon account registration cannot
+authenticate this unprovisioned virtual device: the identity service returns
+HTTP 401 and KindleOS presents that device-authentication failure as a generic
+"account does not exist" message. Supplying or fabricating Amazon device
+credentials is intentionally outside Kindish's compatibility layer.

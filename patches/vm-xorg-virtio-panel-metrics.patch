@@ -1,0 +1,32 @@
+diff --git a/etc/upstart/makexconfig b/etc/upstart/makexconfig
+--- a/etc/upstart/makexconfig
++++ b/etc/upstart/makexconfig
+@@ -68,8 +68,16 @@ server_screen()
+ # Output monitor
+ server_monitor()
+ {
+-	PHY_X="$(devcap-get-feature -i screen.physical width)"
+-	PHY_Y="$(devcap-get-feature -i screen.physical height)"
++	if $KINDISH_VIRTIO; then
++		# The 1072x1448 Kindle panel is 300 ppi (about 91x123 mm).
++		# The device capability reports logical point dimensions, which Xorg
++		# otherwise interprets as millimetres and reduces its DPI to about 100.
++		PHY_X=91
++		PHY_Y=123
++	else
++		PHY_X="$(devcap-get-feature -i screen.physical width)"
++		PHY_Y="$(devcap-get-feature -i screen.physical height)"
++	fi
+ 	echo 'Section "Monitor"'>> $XCONFFILE
+ 	echo '        Identifier       "EinkPanel"'>> $XCONFFILE
+ 	echo "        DisplaySize      $PHY_X $PHY_Y">>$XCONFFILE
+@@ -163,7 +171,7 @@ virtio_tablet()
+   echo '      Option          "AccelerationScheme" "none"' >> $XCONFFILE
+   echo '      Option          "multitouch" "1"' >> $XCONFFILE
+-  echo '      Option          "SizeXMM" "270"' >> $XCONFFILE
+-  echo '      Option          "SizeYMM" "360"' >> $XCONFFILE
++  echo '      Option          "SizeXMM" "91"' >> $XCONFFILE
++  echo '      Option          "SizeYMM" "123"' >> $XCONFFILE
+   echo '      Option          "XkbRules" "evdev"' >> $XCONFFILE
+   echo '      Option          "XkbModel" "evdev"' >> $XCONFFILE
+   echo '      Option          "XkbLayout" "us"' >> $XCONFFILE

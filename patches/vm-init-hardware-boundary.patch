@@ -1,0 +1,32 @@
+diff --git a/etc/upstart/functions b/etc/upstart/functions
+index 5db7f8a..3c2a429 100644
+--- a/etc/upstart/functions
++++ b/etc/upstart/functions
+@@ -26,7 +26,10 @@ _v_width=600
+ _v_height=800
+ _v_wifi=1
+ _v_wan=1
+-_v_id=$(cat /proc/board_id)
++# MT8110 publishes this identity through a private procfs node. The QEMU
++# compatibility board has no corresponding silicon, so use the stable
++# Bellatrix-family value when that node is absent.
++_v_id=$(cat /proc/board_id 2>/dev/null || echo 0003M50000000000)
+ _f_do_rev $_v_id
+ 
+ source /etc/sysconfig/board_functions || logger -t system -p local4.crit " cannot find board functions"
+diff --git a/etc/upstart/system.conf b/etc/upstart/system.conf
+index c8bf2a1..043229f 100644
+--- a/etc/upstart/system.conf
++++ b/etc/upstart/system.conf
+@@ -46,7 +46,10 @@ pre-start script
+ # this is the last kernel milestone (/tmp isn't there yet), so do it by hand.
+ # After this, our milestones go to /tmp
+ 
+-  echo -n sy00 > /proc/bd/boot_milestone
++  # boot_milestone is an MT8110-only diagnostic procfs node. Its absence must
++  # not abort the real Upstart graph on the compatibility board.
++  [ ! -w /proc/bd/boot_milestone ] || \
++    echo -n sy00 > /proc/bd/boot_milestone
+ 
+ # Initiating performance mode in device for boot operations, including framework
+ # start. Device will go into ondemand mode, once Home load is complete

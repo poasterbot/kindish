@@ -1,0 +1,25 @@
+diff --git a/etc/upstart/kindish-wifi-ap.conf b/etc/upstart/kindish-wifi-ap.conf
+--- a/etc/upstart/kindish-wifi-ap.conf
++++ b/etc/upstart/kindish-wifi-ap.conf
+@@ -32,7 +32,9 @@ script
+     "$ip" netns exec "$ap_ns" sh -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'
+ 
+     echo 1 > /proc/sys/net/ipv4/ip_forward
+-    iptables -t nat -A POSTROUTING -s 10.177.0.0/24 -o eth0 -j MASQUERADE
++    "$ip" netns exec "$ap_ns" iptables -t nat -A POSTROUTING \
++        -s 10.177.0.0/24 -o kindish-uplink -j MASQUERADE
++    iptables -t nat -A POSTROUTING -s 172.31.254.0/30 -o eth0 -j MASQUERADE
+     iptables -A FORWARD -i kindish-root -o eth0 -j ACCEPT
+     iptables -A FORWARD -i eth0 -o kindish-root -m conntrack \
+         --ctstate RELATED,ESTABLISHED -j ACCEPT
+@@ -54,9 +56,11 @@ post-stop script
+         kill $(cat /var/run/kindish-udhcpd.pid) 2>/dev/null || true
+         rm -f /var/run/kindish-udhcpd.pid
+     fi
+-    iptables -t nat -D POSTROUTING -s 10.177.0.0/24 -o eth0 \
++    "$ip" netns exec kindish-ap iptables -t nat -D POSTROUTING \
++        -s 10.177.0.0/24 -o kindish-uplink -j MASQUERADE 2>/dev/null || true
++    iptables -t nat -D POSTROUTING -s 172.31.254.0/30 -o eth0 \
+         -j MASQUERADE 2>/dev/null || true
+     iptables -D FORWARD -i kindish-root -o eth0 -j ACCEPT 2>/dev/null || true
+     iptables -D FORWARD -i eth0 -o kindish-root -m conntrack \

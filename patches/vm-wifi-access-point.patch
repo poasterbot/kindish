@@ -1,0 +1,68 @@
+--- /dev/null
++++ b/etc/kindish/hostapd.conf
+@@ -0,0 +1,10 @@
++interface=wlan1
++driver=nl80211
++ssid=Kindish Internet
++hw_mode=g
++channel=1
++country_code=US
++ieee80211d=1
++ieee80211n=1
++wmm_enabled=1
++auth_algs=1
+--- /dev/null
++++ b/etc/kindish/udhcpd.conf
+@@ -0,0 +1,10 @@
++start 10.177.0.20
++end 10.177.0.100
++interface wlan1
++option subnet 255.255.255.0
++option router 10.177.0.1
++option dns 10.0.2.3
++option lease 86400
++lease_file /var/run/kindish-udhcpd.leases
++pidfile /var/run/kindish-udhcpd.pid
++decline_time 3600
+--- /dev/null
++++ b/etc/upstart/kindish-wifi-ap.conf
+@@ -0,0 +1,39 @@
++description "Kindish in-VM Wi-Fi access point"
++
++start on started wifid
++stop on stopping system
++
++respawn
++respawn limit 5 60
++
++script
++    ip link set wlan1 up
++    ip addr add 10.177.0.1/24 dev wlan1 2>/dev/null || true
++
++    echo 1 > /proc/sys/net/ipv4/ip_forward
++    iptables -t nat -C POSTROUTING -o eth0 -j MASQUERADE 2>/dev/null || \
++        iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
++    iptables -C FORWARD -i wlan1 -o eth0 -j ACCEPT 2>/dev/null || \
++        iptables -A FORWARD -i wlan1 -o eth0 -j ACCEPT
++    iptables -C FORWARD -i eth0 -o wlan1 -m conntrack \
++        --ctstate RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || \
++        iptables -A FORWARD -i eth0 -o wlan1 -m conntrack \
++        --ctstate RELATED,ESTABLISHED -j ACCEPT
++
++    touch /var/run/kindish-udhcpd.leases
++    udhcpd -f /etc/kindish/udhcpd.conf >>/var/log/kindish-udhcpd.log 2>&1 &
++    echo $! > /var/run/kindish-udhcpd.pid
++    exec /usr/local/sbin/kindish-hostapd /etc/kindish/hostapd.conf
++end script
++
++post-stop script
++    if [ -s /var/run/kindish-udhcpd.pid ]; then
++        kill $(cat /var/run/kindish-udhcpd.pid) 2>/dev/null || true
++        rm -f /var/run/kindish-udhcpd.pid
++    fi
++    iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE 2>/dev/null || true
++    iptables -D FORWARD -i wlan1 -o eth0 -j ACCEPT 2>/dev/null || true
++    iptables -D FORWARD -i eth0 -o wlan1 -m conntrack \
++        --ctstate RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
++    ip addr del 10.177.0.1/24 dev wlan1 2>/dev/null || true
++end script

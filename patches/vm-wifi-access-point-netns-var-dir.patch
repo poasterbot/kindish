@@ -1,0 +1,12 @@
+diff --git a/etc/upstart/kindish-wifi-ap.conf b/etc/upstart/kindish-wifi-ap.conf
+--- a/etc/upstart/kindish-wifi-ap.conf
++++ b/etc/upstart/kindish-wifi-ap.conf
+@@ -7,7 +7,7 @@ respawn
+ respawn limit 5 60
+ 
+ script
+-    mkdir -p /run/netns
++    mkdir -p /var/netns
+     ap_ns=kindish-ap
+     export LD_LIBRARY_PATH=/usr/local/lib/kindish-iproute2
+     ip=/usr/local/sbin/kindish-ip

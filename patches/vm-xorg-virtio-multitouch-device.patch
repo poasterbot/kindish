@@ -1,0 +1,11 @@
+--- a/etc/upstart/makexconfig
++++ b/etc/upstart/makexconfig
+@@ -302,7 +302,7 @@ do_input()
+     NAME=$(cat /sys/class/input/${i##*/}/device/name 2>/dev/null)
+     case "$NAME" in
+       "QEMU Virtio Keyboard") virtio_keyboard $i ;;
+-      "QEMU Virtio Tablet") virtio_tablet $i ;;
++      "QEMU Virtio MultiTouch") virtio_tablet $i ;;
+       whitney-button) keypad $i $NAME ;;
+       gpiokey) keypad $i $NAME ;;
+       gpio-keys) keypad $i $NAME ;;

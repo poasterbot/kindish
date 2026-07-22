@@ -1,0 +1,21 @@
+diff --git a/etc/upstart/framework.conf b/etc/upstart/framework.conf
+--- a/etc/upstart/framework.conf
++++ b/etc/upstart/framework.conf
+@@ -24,12 +24,14 @@ script
+   f_milestone fr50
+ 
+ # XXX - who uses these anymore?
+ 
+-  echo 0 > /proc/bd/framework_stopped
+-  echo 0 > /proc/bd/framework_running
+-  echo 1 > /proc/bd/framework_started
++  # These are MT8110 boot diagnostics, not framework inputs. The QEMU board
++  # has no boot-diagnostics controller, so write them only when implemented.
++  [ ! -w /proc/bd/framework_stopped ] || echo 0 > /proc/bd/framework_stopped
++  [ ! -w /proc/bd/framework_running ] || echo 0 > /proc/bd/framework_running
++  [ ! -w /proc/bd/framework_started ] || echo 1 > /proc/bd/framework_started
+ 
+   # kill any running instances of the cvm
+   # we need to clean because upstart is not aware of the situation when the 
+   # framework script exits abnormally with cvm still running.
+   # It's the price we pay in order to capture stdout/stderr to the syslogs

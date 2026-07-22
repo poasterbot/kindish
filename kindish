@@ -10,11 +10,11 @@ Usage: ./kindish COMMAND
   fetch       Download and verify the official 5.19.2 KT6 recovery OTA
   extract     Extract the actual Amazon root filesystem and boot images
   inspect     Show OTA, FIT kernel, and filesystem metadata
-  start       Launch the interactive Kindle UI (add --online for Wi-Fi/NAT)
-  stop        Stop the UI, MTP gadget, and runtime mounts
+  start       Boot the official rootfs as a full ARM VM through Amazon init
+  stop        Power off the VM and preserve its writable partitions
   status      Show runtime status and browser address
-  mtp-start   Attach the Kindle's tizen-mtp as a local virtual USB device
-  mtp-stop    Detach virtual USB MTP
+  mtp-start   Attach the VM's Kindle MTP responder to the host
+  mtp-stop    Detach the VM's Kindle MTP responder from the host
 EOF
 }
 

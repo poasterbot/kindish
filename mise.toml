@@ -4,56 +4,47 @@ min_version = "2026.7.0"
 lockfile = true
 lockfile_platforms = ["linux-x64", "linux-arm64"]
 
-[tools]
-python = "3.12"
-
 [bootstrap.packages]
-"apt:binfmt-support" = "latest"
+"apt:bc" = "latest"
+"apt:bison" = "latest"
 "apt:build-essential" = "latest"
 "apt:curl" = "latest"
 "apt:e2fsprogs" = "latest"
 "apt:file" = "latest"
+"apt:flex" = "latest"
 "apt:gcc-arm-linux-gnueabihf" = "latest"
 "apt:git" = "latest"
-"apt:hostapd" = "latest"
 "apt:iproute2" = "latest"
 "apt:iw" = "latest"
 "apt:libarchive-dev" = "latest"
+"apt:libelf-dev" = "latest"
+"apt:libfdt-dev" = "latest"
 "apt:libglib2.0-dev" = "latest"
 "apt:libpixman-1-dev" = "latest"
-"apt:libssl-dev" = "latest"
+"apt:libslirp-dev" = "latest"
 "apt:make" = "latest"
-"apt:ninja-build" = "latest"
-"apt:dnsmasq-base" = "latest"
 "apt:mtp-tools" = "latest"
+"apt:ninja-build" = "latest"
 "apt:novnc" = "latest"
-"apt:python3-pip" = "latest"
-"apt:python3-venv" = "latest"
 "apt:pkg-config" = "latest"
-"apt:qemu-user-static" = "latest"
+"apt:qemu-system-arm" = "latest"
 "apt:ripgrep" = "latest"
 "apt:socat" = "latest"
 "apt:u-boot-tools" = "latest"
 "apt:usbutils" = "latest"
 "apt:util-linux" = "latest"
 "apt:websockify" = "latest"
-"apt:x11-utils" = "latest"
-"apt:x11vnc" = "latest"
-"apt:xdotool" = "latest"
-"apt:zlib1g-dev" = "latest"
 
 [tasks.setup]
 description = "Provision the Ubuntu host with mise"
 run = "mise bootstrap --yes"
 
 [tasks.bootstrap]
-description = "Install running-kernel dependencies and build virtual USB support"
+description = "Install running-kernel USB/IP support"
 run = '''
 sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  "linux-headers-$(uname -r)" \
   "linux-modules-extra-$(uname -r)" \
   "linux-tools-$(uname -r)"
-sudo ./scripts/build-dummy-hcd.sh >/dev/null
 '''
 
 [tasks.fetch]
@@ -69,12 +60,12 @@ description = "Inspect OTA and root filesystem metadata"
 run = "./kindish inspect"
 
 [tasks.start]
-description = "Start the offline KindleOS simulator"
+description = "Boot KindleOS as a full ARM virtual machine"
 run = "sudo ./kindish start"
 
 [tasks.online]
-description = "Start KindleOS with isolated virtual Wi-Fi and Internet access"
-run = "sudo ./kindish start --online"
+description = "Boot the online KindleOS full-system VM"
+run = "sudo ./kindish start"
 
 [tasks.stop]
 description = "Stop KindleOS and preserve its writable state"
@@ -95,9 +86,6 @@ run = "sudo ./kindish mtp-stop"
 [tasks.check]
 description = "Run source-level validation"
 run = '''
-bash -n kindish scripts/*.sh guest/*.sh
-python3 -m py_compile scripts/init-content-catalog.py
-gcc -fsyntax-only -Wall -Wextra src/kindish_uinput.c
-gcc -fsyntax-only -Wall -Wextra src/kindish_shim.c
+bash -n kindish scripts/*.sh
 git diff --check
 '''

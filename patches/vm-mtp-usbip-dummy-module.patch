@@ -1,0 +1,10 @@
+diff --git a/etc/upstart/kindish-mtp-usbip.conf b/etc/upstart/kindish-mtp-usbip.conf
+--- a/etc/upstart/kindish-mtp-usbip.conf
++++ b/etc/upstart/kindish-mtp-usbip.conf
+@@ -1,7 +1,6 @@
+ description "Export the stock Kindle MTP gadget from the VM over USB/IP"
+ 
+-start on started mtp
+ stop on stopping mtp
+ 
+ respawn

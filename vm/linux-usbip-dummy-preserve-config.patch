@@ -1,0 +1,34 @@
+diff --git a/drivers/usb/core/generic.c b/drivers/usb/core/generic.c
+index 8cc59884e5fa..4ffec99bf32d 100644
+--- a/drivers/usb/core/generic.c
++++ b/drivers/usb/core/generic.c
+@@ -266,13 +266,28 @@ int usb_generic_driver_probe(struct usb_device *udev)
+ 	return 0;
+ }
+ 
++static bool kindish_usbip_preserve_configuration(struct usb_device *udev)
++{
++	const char *controller = dev_name(udev->bus->controller);
++
++	/*
++	 * usbip-host takes ownership by unbinding usb-generic.  Normally that
++	 * deconfigures the device.  With dummy_hcd the host and gadget are in the
++	 * same kernel, so SET_CONFIGURATION(0) loops back as a cable disconnect
++	 * and makes the stock Kindle MTP responder tear itself down.
++	 */
++	return !strncmp(controller, "dummy_hcd.", 10) &&
++		le16_to_cpu(udev->descriptor.idVendor) == 0x1949 &&
++		le16_to_cpu(udev->descriptor.idProduct) == 0x9981;
++}
++
+ void usb_generic_driver_disconnect(struct usb_device *udev)
+ {
+ 	usb_notify_remove_device(udev);
+ 
+ 	/* if this is only an unbind, not a physical disconnect, then
+ 	 * unconfigure the device */
+-	if (udev->actconfig)
++	if (udev->actconfig && !kindish_usbip_preserve_configuration(udev))
+ 		usb_set_configuration(udev, -1);
+ }
+ 

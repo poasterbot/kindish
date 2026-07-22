@@ -1,0 +1,29 @@
+diff --git a/etc/upstart/kindish-mtp-usbip.conf b/etc/upstart/kindish-mtp-usbip.conf
+--- a/etc/upstart/kindish-mtp-usbip.conf
++++ b/etc/upstart/kindish-mtp-usbip.conf
+@@ -20,5 +20,10 @@ script
+     # its message queues ready.  Binding the UDC here would skip that state
+     # machine and leave MTP unable to open a session.
++    for count in $(seq 1 30); do
++        [ "$(/usr/bin/lipc-get-prop com.lab126.mtp isMtpStarted 2>/dev/null)" = 1 ] && break
++        sleep 1
++    done
++    [ "$(/usr/bin/lipc-get-prop com.lab126.mtp isMtpStarted 2>/dev/null)" = 1 ] || exit 1
+     /usr/bin/lipc-set-prop com.lab126.mtp startMtp 1
+     for count in $(seq 1 30); do
+         [ "$(/usr/bin/lipc-get-prop com.lab126.volumd driveModeState 2>/dev/null)" = 1 ] && break
+@@ -46,11 +51,10 @@ post-stop script
+     /usr/local/sbin/kindish-usbip unbind --busid=1-1 2>/dev/null || true
+     /usr/bin/lipc-set-prop com.lab126.mtp stopMtp 1 2>/dev/null || true
+     for count in $(seq 1 10); do
+-        if [ ! -e "$gadget/UDC" ] || [ -z "$(cat "$gadget/UDC" 2>/dev/null)" ]; then
+-            break
+-        fi
++        [ "$(/usr/bin/lipc-get-prop com.lab126.volumd driveModeState 2>/dev/null)" = 0 ] && break
+         sleep 1
+     done
+-    [ "$(/usr/bin/lipc-get-prop com.lab126.volumd driveModeState 2>/dev/null)" = 0 ] ||
++    if [ "$(/usr/bin/lipc-get-prop com.lab126.volumd driveModeState 2>/dev/null)" != 0 ]; then
+         /usr/bin/mtp.sh notify unconfigured 2>/dev/null || true
++    fi
+ end script

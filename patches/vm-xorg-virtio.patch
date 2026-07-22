@@ -1,0 +1,101 @@
+diff --git a/etc/upstart/makexconfig b/etc/upstart/makexconfig
+--- a/etc/upstart/makexconfig
++++ b/etc/upstart/makexconfig
+@@ -16,6 +16,12 @@ IS_ACCEL=""
+ IS_KEYPAD=""
+ IS_MOUSE=""
+ IS_ACCEL_TAP=""
++IS_VM_KEYBOARD=""
++KINDISH_VIRTIO=false
++
++if grep -q '^virtio_gpu' /sys/class/graphics/fb0/name 2>/dev/null; then
++  KINDISH_VIRTIO=true
++fi
+ 
+ # Initialize output file
+ init_xconf_file()
+@@ -54,7 +60,7 @@ server_screen()
+   echo '        Device          "eink"'>> $XCONFFILE 
+   echo '        Monitor         "EinkPanel"'>> $XCONFFILE
+   echo '        SubSection      "Display"'>> $XCONFFILE
+-  if [ "$(devcap-get-feature -s color.enabled device)" == "true" ]; then 
++  if $KINDISH_VIRTIO || [ "$(devcap-get-feature -s color.enabled device)" == "true" ]; then
+     echo '                Depth   24'>> $XCONFFILE
+     echo '                Visual  "TrueColor"'>> $XCONFFILE
+   else
+@@ -90,8 +96,10 @@ eink_device()
+   echo '        Identifier  "eink"' >> $XCONFFILE 
+   echo '        Driver      "'$DEVICE_DRIVER'"' >> $XCONFFILE
+   echo '        Option      "fbdev" "/dev/fb0"' >> $XCONFFILE
+-  echo '        Option      "FormatEPDC"' '"'$epdcFormat'"' >> $XCONFFILE
+-  echo '        Option      "Rotate"  "'$DEVICE_ROTATE'"' >> $XCONFFILE
++  if ! $KINDISH_VIRTIO; then
++    echo '        Option      "FormatEPDC"' '"'$epdcFormat'"' >> $XCONFFILE
++    echo '        Option      "Rotate"  "'$DEVICE_ROTATE'"' >> $XCONFFILE
++  fi
+   # Accelerometer Support 
+   if [ "$ACCELEROMETER" = true ]; then
+     echo '        Option      "NoAccel" "false"' >> $XCONFFILE
+@@ -133,6 +141,41 @@ keypad()
+   echo '' >> $XCONFFILE
+ }
+ 
++virtio_keyboard()
++{
++  IS_VM_KEYBOARD=kindish-keyboard
++
++  echo 'Section "InputDevice"' >> $XCONFFILE
++  echo "      Identifier      \"$IS_VM_KEYBOARD\"" >> $XCONFFILE
++  echo '      Driver          "evdev"' >> $XCONFFILE
++  echo "      Option          \"Device\" \"$1\"" >> $XCONFFILE
++  echo '      Option          "CoreKeyboard"' >> $XCONFFILE
++  echo '      Option          "AlwaysCore"' >> $XCONFFILE
++  echo 'EndSection' >> $XCONFFILE
++  echo '' >> $XCONFFILE
++}
++
++virtio_tablet()
++{
++  IS_TOUCH=kindish-tablet
++
++  echo 'Section "InputDevice"' >> $XCONFFILE
++  echo "      Identifier      \"$IS_TOUCH\"" >> $XCONFFILE
++  # Feed the QEMU absolute device through Kindle's real GestureEngine input
++  # driver so VNC presses become the same tap/swipe events as the touch panel.
++  echo '      Driver          "multitouch"' >> $XCONFFILE
++  echo "      Option          \"Device\" \"$1\"" >> $XCONFFILE
++  echo '      Option          "CorePointer"' >> $XCONFFILE
++  echo '      Option          "AlwaysCore"' >> $XCONFFILE
++  echo '      Option          "AccelerationProfile" "-1"' >> $XCONFFILE
++  echo '      Option          "AccelerationScheme" "none"' >> $XCONFFILE
++  echo '      Option          "multitouch" "1"' >> $XCONFFILE
++  echo '      Option          "SizeXMM" "270"' >> $XCONFFILE
++  echo '      Option          "SizeYMM" "360"' >> $XCONFFILE
++  echo 'EndSection' >> $XCONFFILE
++  echo '' >> $XCONFFILE
++}
++
+ # Output accelerometer device
+ accelerometer()
+ {
+@@ -258,7 +296,9 @@ do_input()
+ {
+   for i in /dev/input/event*; do
+-    NAME=`evtest info $i | grep "Input device name:" | awk '{ print $4 }' | sed 's/"//g'`
++    NAME=$(cat /sys/class/input/${i##*/}/device/name 2>/dev/null)
+     case "$NAME" in
++      "QEMU Virtio Keyboard") virtio_keyboard $i ;;
++      "QEMU Virtio MultiTouch") virtio_tablet $i ;;
+       whitney-button) keypad $i $NAME ;;
+       gpiokey) keypad $i $NAME ;;
+       gpio-keys) keypad $i $NAME ;;
+@@ -300,6 +340,9 @@ server_layout()
+   if [ -n "$IS_KEYPAD" ]; then
+     echo "  InputDevice \"$IS_KEYPAD\"" >> $XCONFFILE 
+   fi
++  if [ -n "$IS_VM_KEYBOARD" ]; then
++    echo "  InputDevice \"$IS_VM_KEYBOARD\"" >> $XCONFFILE
++  fi
+   if [ -n "$IS_TOUCH" ]; then
+     echo "  InputDevice \"$IS_TOUCH\"" >> $XCONFFILE
+   fi

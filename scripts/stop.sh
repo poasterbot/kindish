@@ -1,27 +1,46 @@
 #!/usr/bin/env bash
 set -euo pipefail
 source "$(dirname "$0")/_common.sh"
-need_root
+
+VM_PID_FILE="$RUNTIME_DIR/kindish-vm.pid"
+VM_QMP_SOCKET="$RUNTIME_DIR/kindish-qmp.sock"
+VM_DEBUG_SOCKET="$RUNTIME_DIR/kindish-debug.sock"
 
 "$PROJECT_ROOT/scripts/mtp-stop.sh" >/dev/null 2>&1 || true
-"$PROJECT_ROOT/scripts/network-online-stop.sh" >/dev/null 2>&1 || true
 
-for name in window-manager supervisor novnc vnc-bridge x11vnc touch; do
-  pid_file="$PID_DIR/$name.pid"
-  if pid_alive "$pid_file"; then
-    # Each top-level service is its own session/process group. Terminating the
-    # group also catches daemon forks and the qemu-arm translated children.
-    kill -- "-$(<"$pid_file")" 2>/dev/null || kill "$(<"$pid_file")" 2>/dev/null || true
+if pid_alive "$VM_PID_FILE"; then
+  vm_pid=$(<"$VM_PID_FILE")
+  if [[ -S "$VM_DEBUG_SOCKET" ]]; then
+    {
+      sleep 0.2
+      printf '\nshutdown -h now\n'
+      sleep 1
+    } | socat - "UNIX-CONNECT:$VM_DEBUG_SOCKET" >/dev/null 2>&1 || true
   fi
-done
-sleep 0.5
-for name in window-manager supervisor novnc vnc-bridge x11vnc touch; do
-  pid_file="$PID_DIR/$name.pid"
-  if pid_alive "$pid_file"; then
-    kill -KILL -- "-$(<"$pid_file")" 2>/dev/null || kill -KILL "$(<"$pid_file")" 2>/dev/null || true
+  for _ in {1..600}; do
+    kill -0 "$vm_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  if kill -0 "$vm_pid" 2>/dev/null; then
+    if [[ -S "$VM_QMP_SOCKET" ]]; then
+      {
+        printf '{"execute":"qmp_capabilities"}\n'
+        printf '{"execute":"quit"}\n'
+      } | socat - "UNIX-CONNECT:$VM_QMP_SOCKET" >/dev/null 2>&1 || true
+    else
+      kill "$vm_pid" 2>/dev/null || true
+    fi
   fi
-  [[ ! -e "$pid_file" ]] || unlink "$pid_file"
+fi
+
+if pid_alive "$PID_DIR/novnc.pid"; then
+  kill "$(<"$PID_DIR/novnc.pid")" 2>/dev/null || true
+fi
+for stale in \
+  "$VM_PID_FILE" \
+  "$RUNTIME_DIR/kindish-qmp.sock" \
+  "$RUNTIME_DIR/kindish-debug.sock" \
+  "$PID_DIR/novnc.pid"; do
+  [[ ! -e "$stale" ]] || unlink "$stale"
 done
-[[ ! -e "$VNC_SOCKET" ]] || unlink "$VNC_SOCKET"
-"$PROJECT_ROOT/scripts/unmount-runtime.sh" >/dev/null
-printf 'KindleOS stopped. The writable runtime and user storage were kept.\n'
+printf 'KindleOS VM stopped. Writable partitions were preserved.\n'

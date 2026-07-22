@@ -1,0 +1,8 @@
+diff --git a/drivers/platform/Makefile b/drivers/platform/Makefile
+index 81f98417f..f5f532d2a 100644
+--- a/drivers/platform/Makefile
++++ b/drivers/platform/Makefile
+@@ -1,2 +1,3 @@
+ # SPDX-License-Identifier: GPL-2.0
++obj-y			+= kindish_board.o
+ #
