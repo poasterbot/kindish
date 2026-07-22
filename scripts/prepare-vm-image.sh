@@ -3,7 +3,7 @@ set -euo pipefail
 source "$(dirname "$0")/_common.sh"
 need_root
 
-VM_IMAGE="$RUNTIME_DIR/kindle-vm-sd.img"
+VM_IMAGE="$RUNTIME_DIR/kindle-vm-${FIRMWARE_VERSION}-sd.img"
 VM_ROOT="$RUNTIME_DIR/vm-root"
 VM_KERNEL_VERSION="6.12.89"
 VM_DUMMY_HCD="$CACHE_DIR/build/kindish-vm-modules/lib/modules/$VM_KERNEL_VERSION/kernel/drivers/usb/gadget/udc/dummy_hcd.ko"
@@ -11,6 +11,7 @@ VM_DEVCAP_SHIM="$($PROJECT_ROOT/scripts/build-vm-devcap-shim.sh)"
 VM_POWER_BUTTON="$($PROJECT_ROOT/scripts/build-vm-power-button.sh)"
 ROOTFS_PATCHES=(
   "$PROJECT_ROOT/patches/vm-init-hardware-boundary.patch"
+  "$PROJECT_ROOT/patches/vm-system-cpufreq-boundary.patch"
   "$PROJECT_ROOT/patches/vm-system-var-move-diagnostics.patch"
   "$PROJECT_ROOT/patches/vm-system-var-move-success-status.patch"
   "$PROJECT_ROOT/patches/vm-disable-hardware-data-layer.patch"
@@ -25,8 +26,10 @@ ROOTFS_PATCHES=(
   "$PROJECT_ROOT/patches/vm-browser-virtio-color-depth.patch"
   "$PROJECT_ROOT/patches/vm-browser-appmgr-timeout.patch"
   "$PROJECT_ROOT/patches/vm-framework-hardware-boundary.patch"
+  "$PROJECT_ROOT/patches/vm-framework-profile-storage-boundary.patch"
   "$PROJECT_ROOT/patches/vm-framework-timeout.patch"
   "$PROJECT_ROOT/patches/vm-framework-usb-blanket.patch"
+  "$PROJECT_ROOT/patches/vm-userstore-mtp-gadget-boundary.patch"
   "$PROJECT_ROOT/patches/vm-wifi-access-point.patch"
   "$PROJECT_ROOT/patches/vm-wifi-access-point-netns.patch"
   "$PROJECT_ROOT/patches/vm-wifi-access-point-iproute2.patch"
@@ -64,18 +67,29 @@ ensure_loop_devices() {
 ensure_partition_devices() {
   local loop_device="$1"
   local loop_name="${loop_device#/dev/}"
-  local sys_partition partition_name major minor
+  local attempt sys_partition partition_name major minor
 
   # The container exposes the loop driver's partition scan, but it does not
   # always run udev to materialize /dev/loopNpM. Create only the exact nodes
-  # reported by sysfs for this attached image.
-  for sys_partition in /sys/class/block/"$loop_name"p*; do
-    [[ -e "$sys_partition/dev" ]] || continue
-    partition_name="$(basename "$sys_partition")"
-    IFS=: read -r major minor < "$sys_partition/dev"
-    [[ -e "/dev/$partition_name" ]] || \
-      mknod "/dev/$partition_name" b "$major" "$minor"
+  # reported by sysfs for this attached image. Partition scanning is
+  # asynchronous and its first sysfs entries can be replaced while GPT is
+  # still being read, so wait for the two partitions used below to stabilize.
+  for attempt in {1..100}; do
+    for sys_partition in /sys/class/block/"$loop_name"p*; do
+      [[ -r "$sys_partition/dev" ]] || continue
+      partition_name="$(basename "$sys_partition")"
+      if IFS=: read -r major minor < "$sys_partition/dev" 2>/dev/null; then
+        [[ -e "/dev/$partition_name" ]] || \
+          mknod "/dev/$partition_name" b "$major" "$minor"
+      fi
+    done
+    if [[ -r "/sys/class/block/${loop_name}p8/dev" &&
+          -r "/sys/class/block/${loop_name}p10/dev" ]]; then
+      return
+    fi
+    sleep 0.05
   done
+  die "partition scan did not settle for $loop_device"
 }
 
 cleanup() {

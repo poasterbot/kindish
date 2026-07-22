@@ -1,0 +1,29 @@
+diff --git a/etc/upstart/filesystems_userstore.conf b/etc/upstart/filesystems_userstore.conf
+--- a/etc/upstart/filesystems_userstore.conf
++++ b/etc/upstart/filesystems_userstore.conf
+@@ -53,14 +53,19 @@ pre-start script
+     fi
+   fi
+ 
+-  if [ -n "$BOARD_ID_PRODUCT" ]; then
+-    if [ "$BOARD_STALL" = "0" ]; then
+-        modprobe g_mass_storage file="" removable=1 idVendor=0x1949 idProduct=$BOARD_ID_PRODUCT stall=$BOARD_STALL
++  # Bellatrix exposes the userstore through MTP, not the legacy mass-storage
++  # gadget. The retail kernel supplies the controller selection underneath
++  # this branch; the compatibility kernel supplies it on demand through USB/IP.
++  if [ "$MTP_AVAILABLE" != "true" ]; then
++    if [ -n "$BOARD_ID_PRODUCT" ]; then
++      if [ "$BOARD_STALL" = "0" ]; then
++          modprobe g_mass_storage file="" removable=1 idVendor=0x1949 idProduct=$BOARD_ID_PRODUCT stall=$BOARD_STALL
++      else
++          modprobe g_mass_storage file="" removable=1 idVendor=0x1949 idProduct=$BOARD_ID_PRODUCT
++      fi
+     else
+-        modprobe g_mass_storage file="" removable=1 idVendor=0x1949 idProduct=$BOARD_ID_PRODUCT
++      modprobe g_file_storage
+     fi
+-  else
+-    modprobe g_file_storage
+   fi
+ 
+   if [ -e $FS_CREATE_REASON_FACTORY_RESET_FLAG ]; then

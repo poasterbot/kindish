@@ -8,7 +8,7 @@ if [[ -f "$FIRMWARE_FILE" ]] && echo "$FIRMWARE_SHA256  $FIRMWARE_FILE" | sha256
   exit 0
 fi
 
-printf 'Downloading the official KT6 5.19.2 recovery OTA from Amazon...\n'
+printf 'Downloading the official KT6 %s recovery OTA from Amazon...\n' "$FIRMWARE_VERSION"
 curl --fail --location --retry 3 --continue-at - --output "$FIRMWARE_FILE" "$FIRMWARE_URL"
 echo "$FIRMWARE_SHA256  $FIRMWARE_FILE" | sha256sum --check --status || die "firmware checksum mismatch"
 printf 'Verified: %s\n' "$FIRMWARE_FILE"

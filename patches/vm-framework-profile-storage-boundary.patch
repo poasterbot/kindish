@@ -1,0 +1,17 @@
+diff --git a/etc/upstart/framework.conf b/etc/upstart/framework.conf
+--- a/etc/upstart/framework.conf
++++ b/etc/upstart/framework.conf
+@@ -40,6 +40,13 @@ script
+   killall -s KILL cvm || true
+ 
+   set +e
++  # Factory provisioning creates this writable profile-token directory on a
++  # physical Kindle. The recovery OTA has no per-device /var/local seed, so
++  # create the same boundary before the stock household service starts.
++  mkdir -p /var/local/token
++  chown framework:javausers /var/local/token
++  chmod 2775 /var/local/token
++
+   DIRLIST="/var/local /var/log /var/lock /var/run"
+   for dir in $DIRLIST                            
+   do

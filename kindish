@@ -7,7 +7,7 @@ usage() {
 Usage: ./kindish COMMAND
 
   setup       Provision Ubuntu host dependencies through mise
-  fetch       Download and verify the official 5.19.2 KT6 recovery OTA
+  fetch       Download and verify the official 5.18.5.0.1 KT6 recovery OTA
   extract     Extract the actual Amazon root filesystem and boot images
   inspect     Show OTA, FIT kernel, and filesystem metadata
   start       Boot the official rootfs as a full ARM VM through Amazon init

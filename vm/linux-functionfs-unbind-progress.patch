@@ -1,0 +1,41 @@
+diff --git a/drivers/usb/gadget/function/u_fs.h b/drivers/usb/gadget/function/u_fs.h
+--- a/drivers/usb/gadget/function/u_fs.h
++++ b/drivers/usb/gadget/function/u_fs.h
+@@ -210,6 +210,7 @@ struct ffs_data {
+ 	unsigned long			flags;
+ #define FFS_FL_CALL_CLOSED_CALLBACK 0
+ #define FFS_FL_BOUND                1
++#define FFS_FL_UNBINDING            2
+ 
+ 	/* Active function */
+ 	struct ffs_function		*func;
+diff --git a/drivers/usb/gadget/function/f_fs.c b/drivers/usb/gadget/function/f_fs.c
+--- a/drivers/usb/gadget/function/f_fs.c
++++ b/drivers/usb/gadget/function/f_fs.c
+@@ -555,7 +555,8 @@ static ssize_t ffs_ep0_read(struct file *file, char __user *buf,
+ 		return ret;
+ 
+ 	/* Check state */
+-	if (ffs->state != FFS_ACTIVE) {
++	if (ffs->state != FFS_ACTIVE ||
++	    test_bit(FFS_FL_UNBINDING, &ffs->flags)) {
+ 		ret = -EBADFD;
+ 		goto done_mutex;
+ 	}
+@@ -2318,6 +2319,7 @@ static void functionfs_unbind(struct ffs_data *ffs)
+ 		ffs->ep0req = NULL;
+ 		ffs->gadget = NULL;
+ 		clear_bit(FFS_FL_BOUND, &ffs->flags);
++		clear_bit(FFS_FL_UNBINDING, &ffs->flags);
+ 		mutex_unlock(&ffs->mutex);
+ 		ffs_data_put(ffs);
+ 	}
+@@ -4064,6 +4066,8 @@ static void ffs_func_unbind(struct usb_configuration *c,
+ 	/* Drain any pending AIO completions */
+ 	drain_workqueue(ffs->io_completion_wq);
+ 
++	if (opts->refcnt == 1)
++		set_bit(FFS_FL_UNBINDING, &ffs->flags);
+ 	ffs_event_add(ffs, FUNCTIONFS_UNBIND);
+ 	if (!--opts->refcnt)
+ 		functionfs_unbind(ffs);

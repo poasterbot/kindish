@@ -14,6 +14,7 @@ KERNEL_BOARD_SOURCE="$PROJECT_ROOT/vm/kindish_board.c"
 KERNEL_PATCHES=(
   "$PROJECT_ROOT/vm/linux-kindish-board.patch"
   "$PROJECT_ROOT/vm/linux-virtio-eink-ioctls.patch"
+  "$PROJECT_ROOT/vm/linux-functionfs-unbind-progress.patch"
   "$PROJECT_ROOT/vm/linux-usbip-dummy-preserve-config.patch"
 )
 

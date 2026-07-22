@@ -1,12 +1,6 @@
 diff --git a/usr/bin/browser b/usr/bin/browser
 --- a/usr/bin/browser
 +++ b/usr/bin/browser
-@@ -24,7 +24,7 @@ fi
- export LD_LIBRARY_PATH="/usr/bin/chromium/:/usr/lib/"
- 
- exec /usr/bin/chromium/kindle_browser --skia-resource-cache-limit-mb=64 \
+@@ -25 +25 @@
 -     --disable-gpu --in-process-gpu --disable-gpu-sandbox --disable-gpu-compositing --disable-seccomp-filter-sandbox \
 +     --no-sandbox --disable-gpu --in-process-gpu --disable-gpu-sandbox --disable-gpu-compositing --disable-seccomp-filter-sandbox \
-      --enable-dom-distiller --enable-distillability-service --force-device-scale-factor=2 --js-flags="--jitless" \
-      --content-shell-hide-toolbar --content-shell-host-window-cord=0,215 \
-      --force-gpu-mem-available-mb=64 --enable-low-end-device-mode --enable-low-res-tiling --disable-site-isolation-trials \

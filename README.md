@@ -1,6 +1,6 @@
-# Kindish — full-system KindleOS 5.19.2 VM
+# Kindish — full-system KindleOS 5.18.5.0.1 VM
 
-Kindish boots Amazon's signed 2024 Kindle Basic (KT6/Bellatrix) 5.19.2
+Kindish boots Amazon's signed 2024 Kindle Basic (KT6/Bellatrix) 5.18.5.0.1
 root filesystem as a complete ARM virtual machine. The kernel invokes
 Amazon's `/sbin/init` wrapper, which execs `/sbin/init.exe` as PID 1; the stock
 Upstart graph mounts the Kindle partition layout, and the real Xorg, Java
@@ -99,6 +99,22 @@ OTA's real `/usr/bin/tizen-mtp` responder and can open a session, enumerate its
 operations, and access the persistent Kindle storage. The host requires the
 running kernel's `vhci_hcd` module; `mise run setup` installs Ubuntu's matching
 `linux-modules-extra` and `linux-tools` packages.
+
+## AdBreak verification
+
+The pinned OTA identifies itself as build `455679`, the 2024 Kindle Basic
+entry supported by the unmodified AdBreak 1.1 offset table. The exploit has
+been exercised end to end in Kindish with the intended interfaces: copy the
+Kindle's `.assets` tree through the stock MTP responder, merge the upstream
+payload and replace each offer's `details.html`, detach MTP, then use the
+touchscreen path **Menu → View All Ads → offer** and dismiss the four alerts.
+
+The recovery OTA has no factory-provisioned Amazon device identity, so it
+cannot download a real account's offers. End-to-end testing therefore needs a
+local offer first; Kindish's verified run ingested that harmless fixture with
+the stock AdManager before replacing its assets over MTP. The exploit itself
+then installed the developer update key and jailbreak marker files through the
+upstream `jb.sh`; it was not invoked from the diagnostic console.
 
 ## Compatibility boundaries
 

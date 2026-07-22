@@ -48,7 +48,7 @@ sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
 '''
 
 [tasks.fetch]
-description = "Download and verify the official KT6 5.19.2 OTA"
+description = "Download and verify the official KT6 5.18.5.0.1 OTA"
 run = "./kindish fetch"
 
 [tasks.extract]

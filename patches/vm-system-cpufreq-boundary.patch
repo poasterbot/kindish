@@ -1,0 +1,14 @@
+diff --git a/etc/upstart/system.conf b/etc/upstart/system.conf
+--- a/etc/upstart/system.conf
++++ b/etc/upstart/system.conf
+@@ -52,7 +52,9 @@ pre-start script
+ 
+ # Initiating performance mode in device for boot operations, including framework
+ # start. Device will go into ondemand mode, once Home load is complete
+-  echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
++  # QEMU's generic CPU has no Kindle cpufreq driver. Keep the stock policy
++  # request when the kernel exposes it, without aborting init when it does not.
++  echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor || true
+ 
+ 
+ # udev appears to duplicate a lot of this, not sure anything other than

@@ -8,7 +8,7 @@ for command in socat websockify; do
   command -v "$command" >/dev/null || die "$command is required; run './kindish setup'"
 done
 
-VM_IMAGE="$RUNTIME_DIR/kindle-vm-sd.img"
+VM_IMAGE="$RUNTIME_DIR/kindle-vm-${FIRMWARE_VERSION}-sd.img"
 VM_KERNEL="$CACHE_DIR/build/kindish-vm-zImage"
 VM_DUMMY_HCD="$CACHE_DIR/build/kindish-vm-modules/lib/modules/6.12.89/kernel/drivers/usb/gadget/udc/dummy_hcd.ko"
 VM_PID_FILE="$RUNTIME_DIR/kindish-vm.pid"

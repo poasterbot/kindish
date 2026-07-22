@@ -45,7 +45,7 @@ done
     'initctl stop kindish-mtp-usbip 2>/dev/null || true' \
     'grep -q "^dummy_hcd " /proc/modules || insmod /lib/modules/6.12.89/kernel/drivers/usb/gadget/udc/dummy_hcd.ko' \
     'initctl restart mtp' \
-    'initctl start kindish-mtp-usbip'
+    'initctl start --no-wait kindish-mtp-usbip'
   sleep 1
 } | socat - "UNIX-CONNECT:$VM_DEBUG_SOCKET" >/dev/null 2>&1 || \
   die "failed to enable the VM's stock MTP gadget"
