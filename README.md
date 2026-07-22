@@ -53,6 +53,9 @@ mise run stop
 - Input: QEMU virtio keyboard and direct multi-touch devices. The touch device
   passes through Amazon's `multitouch.so` GestureEngine so browser contacts
   become normal Kindle taps and swipes.
+- Power: QEMU's ARM GPIO power key is wake-capable and repeatable. A small
+  board-HAL bridge forwards its evdev press to the untouched stock `powerd`, so
+  the same host task both enters the screensaver and wakes KindleOS again.
 - Network: `mac80211_hwsim` creates two real `nl80211` radios. Stock `wifid`
   owns `wlan0`; ARM `hostapd` turns `wlan1` into the `Kindish Internet` access
   point in a separate Linux network namespace. DHCP and a two-stage AP/uplink
@@ -128,6 +131,7 @@ mise run fetch
 mise run extract
 mise run inspect
 mise run status
+mise run power
 mise run check
 ```
 

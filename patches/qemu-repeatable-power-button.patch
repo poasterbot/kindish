@@ -1,0 +1,32 @@
+diff --git a/hw/arm/virt.c b/hw/arm/virt.c
+index 4d3b0d3f97..fdf410fdb7 100644
+--- a/hw/arm/virt.c
++++ b/hw/arm/virt.c
+@@ -939,8 +939,11 @@ static void virt_powerdown_req(Notifier *n, void *opaque)
+     if (s->acpi_dev) {
+         acpi_send_event(s->acpi_dev, ACPI_POWER_DOWN_STATUS);
+     } else {
++        qemu_irq power_button = qdev_get_gpio_in(gpio_key_dev, 0);
++
+         /* use gpio Pin 3 for power button event */
+-        qemu_set_irq(qdev_get_gpio_in(gpio_key_dev, 0), 1);
++        qemu_set_irq(power_button, 1);
++        qemu_set_irq(power_button, 0);
+     }
+ }
+
+diff --git a/hw/gpio/gpio_key.c b/hw/gpio/gpio_key.c
+index 7a1d9e1870..fe487c594d 100644
+--- a/hw/gpio/gpio_key.c
++++ b/hw/gpio/gpio_key.c
+@@ -72,6 +72,10 @@ static void gpio_key_set_irq(void *opaque, int irq, int level)
+ {
+     GPIOKEYState *s = (GPIOKEYState *)opaque;
+
++    if (!level) {
++        return;
++    }
++
+     qemu_set_irq(s->irq, 1);
+     timer_mod(s->timer,
+               qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL) + GPIO_KEY_LATENCY);

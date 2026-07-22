@@ -1,0 +1,16 @@
+diff --git a/etc/upstart/kindish-power-button.conf b/etc/upstart/kindish-power-button.conf
+new file mode 100644
+index 0000000..e2ace03
+--- /dev/null
++++ b/etc/upstart/kindish-power-button.conf
+@@ -0,0 +1,10 @@
++# Translate QEMU's generic GPIO power key into the stock board-HAL event.
++description "Kindish VM GPIO power-button bridge"
++
++start on started powerd
++stop on stopping powerd
++
++respawn
++respawn limit 10 30
++
++exec /usr/local/sbin/kindish-power-button

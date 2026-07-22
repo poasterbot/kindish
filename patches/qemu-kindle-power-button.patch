@@ -1,0 +1,12 @@
+diff --git a/hw/arm/virt.c b/hw/arm/virt.c
+index 4d3b0d3f97..a45fc3a98a 100644
+--- a/hw/arm/virt.c
++++ b/hw/arm/virt.c
+@@ -959,5 +959,7 @@ static void create_gpio_keys(char *fdt, DeviceState *pl061_dev,
+     qemu_fdt_setprop_cell(fdt, "/gpio-keys/poweroff", "linux,code",
+                           KEY_POWER);
++    qemu_fdt_setprop(fdt, "/gpio-keys/poweroff", "wakeup-source",
++                     NULL, 0);
+     qemu_fdt_setprop_cells(fdt, "/gpio-keys/poweroff",
+                            "gpios", phandle, 3, 0);
+ }

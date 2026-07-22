@@ -6,9 +6,13 @@ QEMU_COMMIT="11aa0b1ff115b86160c4d37e7c37e6a6b13b77ea"
 QEMU_SOURCE="$CACHE_DIR/tools/qemu-$QEMU_COMMIT"
 QEMU_BUILD="$QEMU_SOURCE/build-kindish-system"
 QEMU_OUTPUT="$CACHE_DIR/build/qemu-system-arm-kindish"
-PATCH_FILE="$PROJECT_ROOT/patches/qemu-vnc-multitouch.patch"
+PATCH_FILES=(
+  "$PROJECT_ROOT/patches/qemu-vnc-multitouch.patch"
+  "$PROJECT_ROOT/patches/qemu-kindle-power-button.patch"
+  "$PROJECT_ROOT/patches/qemu-repeatable-power-button.patch"
+)
 STAMP="$CACHE_DIR/build/qemu-system-arm-kindish.stamp"
-patch_hash="$(sha256sum "$PATCH_FILE" | awk '{print $1}')"
+patch_hash="$(sha256sum "${PATCH_FILES[@]}" | sha256sum | awk '{print $1}')"
 expected_stamp="$QEMU_COMMIT $patch_hash"
 
 if [[ -x "$QEMU_OUTPUT" && -f "$STAMP" && "$(<"$STAMP")" == "$expected_stamp" ]]; then
@@ -33,11 +37,13 @@ fi
 [[ "$(git -C "$QEMU_SOURCE" rev-parse HEAD)" == "$QEMU_COMMIT" ]] || \
   die "$QEMU_SOURCE is not the pinned QEMU source"
 
-if git -C "$QEMU_SOURCE" apply --check "$PATCH_FILE" 2>/dev/null; then
-  git -C "$QEMU_SOURCE" apply "$PATCH_FILE"
-elif ! git -C "$QEMU_SOURCE" apply --reverse --check "$PATCH_FILE" 2>/dev/null; then
-  die "cached QEMU source has unexpected VNC/input changes"
-fi
+for patch_file in "${PATCH_FILES[@]}"; do
+  if git -C "$QEMU_SOURCE" apply --check "$patch_file" 2>/dev/null; then
+    git -C "$QEMU_SOURCE" apply "$patch_file"
+  elif ! git -C "$QEMU_SOURCE" apply --reverse --check "$patch_file" 2>/dev/null; then
+    die "cached QEMU source has unexpected changes for $(basename "$patch_file")"
+  fi
+done
 
 if [[ ! -f "$QEMU_BUILD/build.ninja" ]]; then
   mkdir -p "$QEMU_BUILD"
@@ -49,10 +55,10 @@ if [[ ! -f "$QEMU_BUILD/build.ninja" ]]; then
       --disable-guest-agent \
       --disable-tools \
       --enable-slirp \
-      --enable-vnc
+      --enable-vnc >&2
   )
 fi
-ninja -C "$QEMU_BUILD" qemu-system-arm
+ninja -C "$QEMU_BUILD" qemu-system-arm >&2
 install -m 0755 "$QEMU_BUILD/qemu-system-arm" "$QEMU_OUTPUT"
 printf '%s\n' "$expected_stamp" > "$STAMP"
 printf '%s\n' "$QEMU_OUTPUT"

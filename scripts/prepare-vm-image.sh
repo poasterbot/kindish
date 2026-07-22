@@ -8,12 +8,14 @@ VM_ROOT="$RUNTIME_DIR/vm-root"
 VM_KERNEL_VERSION="6.12.89"
 VM_DUMMY_HCD="$CACHE_DIR/build/kindish-vm-modules/lib/modules/$VM_KERNEL_VERSION/kernel/drivers/usb/gadget/udc/dummy_hcd.ko"
 VM_DEVCAP_SHIM="$($PROJECT_ROOT/scripts/build-vm-devcap-shim.sh)"
+VM_POWER_BUTTON="$($PROJECT_ROOT/scripts/build-vm-power-button.sh)"
 ROOTFS_PATCHES=(
   "$PROJECT_ROOT/patches/vm-init-hardware-boundary.patch"
   "$PROJECT_ROOT/patches/vm-system-var-move-diagnostics.patch"
   "$PROJECT_ROOT/patches/vm-system-var-move-success-status.patch"
   "$PROJECT_ROOT/patches/vm-disable-hardware-data-layer.patch"
   "$PROJECT_ROOT/patches/vm-debug-console.patch"
+  "$PROJECT_ROOT/patches/vm-power-button-hardware-boundary.patch"
   "$PROJECT_ROOT/patches/vm-xorg-virtio.patch"
   "$PROJECT_ROOT/patches/vm-xorg-virtio-multitouch-xkb.patch"
   "$PROJECT_ROOT/patches/vm-xorg-virtio-multitouch-device.patch"
@@ -174,6 +176,8 @@ fi
 ln -sfn libdevice-cap-kindish-real.so.1.0 \
   "$VM_ROOT/usr/lib/libkindle-cap.so.1"
 install -m 0755 "$VM_DEVCAP_SHIM" "$DEVCAP_LIBRARY"
+install -D -m 0755 "$VM_POWER_BUTTON" \
+  "$VM_ROOT/usr/local/sbin/kindish-power-button"
 hostapd_binary=$("$PROJECT_ROOT/scripts/fetch-vm-hostapd.sh")
 install -D -m 0755 "$hostapd_binary" \
   "$VM_ROOT/usr/local/sbin/kindish-hostapd"
