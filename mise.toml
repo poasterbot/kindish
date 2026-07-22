@@ -75,6 +75,10 @@ run = "sudo ./kindish stop"
 description = "Show simulator and virtual MTP status"
 run = "./kindish status"
 
+[tasks.power]
+description = "Press the Kindle power button"
+run = "./scripts/power-button.sh"
+
 [tasks."mtp:start"]
 description = "Attach the actual Kindle MTP responder as virtual USB"
 run = "sudo ./kindish mtp-start"
