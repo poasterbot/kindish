@@ -1,0 +1,17 @@
+diff --git a/etc/upstart/appmgrd.conf b/etc/upstart/appmgrd.conf
+--- a/etc/upstart/appmgrd.conf
++++ b/etc/upstart/appmgrd.conf
+@@ -11,6 +11,13 @@ script
+         export TRACK_MEMORY=1
+     fi
+ 
++    # TCG can take longer than the physical device's 30-second deadline to
++    # initialize Chromium. Keep the normal app manager, but give only the
++    # browser enough time to finish loading in the VM.
++    sqlite3 /var/local/appreg.db "update properties set value='300' \
++        where handlerId='com.lab126.browser' \
++        and name in ('maxExecTime','maxLoadTime');"
++
+     if [ -f /mnt/us/DEBUG_CVM_JDWP ] || [ -f /mnt/us/DEBUG_CVM_JDWP_SUSPEND ] || [ -f /mnt/us/PROFILE_CVM_NB ] 
+     then
+         export DISABLE_TIMEOUTS=1

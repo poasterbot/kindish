@@ -1,0 +1,20 @@
+diff --git a/etc/upstart/framework_setup.conf b/etc/upstart/framework_setup.conf
+--- a/etc/upstart/framework_setup.conf
++++ b/etc/upstart/framework_setup.conf
+@@ -114,8 +114,14 @@ script
+         rm -f "$BOOT_WITH_CVM_DEBUGGING" || true
+     fi
+ 
+-    # load the usb module
+-    f_blanket_load_module usb
++    # A physical Kindle always has a USB device controller. Kindish loads its
++    # virtual controller only when MTP is explicitly attached; without one,
++    # loading this blanket leaves a permanent "Connected to computer" screen.
++    if [ -n "$(ls -A /sys/class/udc 2>/dev/null)" ]; then
++        f_blanket_load_module usb
++    else
++        f_log I framework_setup "USB controller absent" "not loading usb blanket"
++    fi
+ 
+     # need to setup the screensaver before tearing down the splash
+     # HACK until we have states in powerd that directly tell us

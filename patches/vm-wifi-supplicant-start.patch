@@ -1,0 +1,12 @@
+diff --git a/etc/upstart/wifis.conf b/etc/upstart/wifis.conf
+--- a/etc/upstart/wifis.conf
++++ b/etc/upstart/wifis.conf
+@@ -1,5 +1,8 @@
+ # wifi supplicant
+ 
++# The virtual AP is the VM's driver-ready boundary.
++start on started kindish-wifi-ap
++
+ stop on stopping lab126
+ 
+ export LANG LC_ALL

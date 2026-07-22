@@ -1,0 +1,9 @@
+diff --git a/usr/bin/browser b/usr/bin/browser
+--- a/usr/bin/browser
++++ b/usr/bin/browser
+@@ -31,5 +31,4 @@ exec /usr/bin/chromium/kindle_browser --skia-resource-cache-limit-mb=64 \
+      --content-shell-host-window-cord=0,215 \
+      --force-gpu-mem-available-mb=64 --enable-low-end-device-mode --enable-low-res-tiling --disable-site-isolation-trials \
+-     --user-agent="Mozilla/5.0 (X11; U; Linux armv7l like Android; en-us) AppleWebKit/531.2+ (KHTML, like Gecko) Version/5.0 Safari/533.2+ Kindle/3.0+" \
+-     --enable-grayscale-mode
++     --user-agent="Mozilla/5.0 (X11; U; Linux armv7l like Android; en-us) AppleWebKit/531.2+ (KHTML, like Gecko) Version/5.0 Safari/533.2+ Kindle/3.0+"

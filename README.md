@@ -105,6 +105,8 @@ The root filesystem remains overwhelmingly stock. Maintained patches:
 - use static board capabilities where the MediaTek data-layer service is
   absent;
 - generate Xorg configuration for virtio graphics and input;
+- adapt Chromium's sandbox and grayscale-only output path to the isolated VM
+  and virtio's 32-bit framebuffer, with a TCG-sized app startup deadline;
 - translate VNC's primary pointer contact into QEMU's native multi-touch event
   stream;
 - extend the framework-start watchdog from 105 to 600 seconds for TCG;
